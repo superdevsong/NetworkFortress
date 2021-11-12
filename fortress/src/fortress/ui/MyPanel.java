@@ -25,21 +25,15 @@ import javax.swing.JPanel;
  * 이중 버퍼링이라던가 변수 하나로 선언해서 묶는다던가
  * */
 public class MyPanel extends JPanel {
-	boolean direction = true;
-	Image image = new ImageIcon("src/fortress/ui/tree.jpg").getImage();
-	Image image_r = new ImageIcon("src/fortress/ui/cannon.png").getImage();
-	Image image_l = new ImageIcon("src/fortress/ui/cannon_reverse.png").getImage();
-	Image image_t = new ImageIcon("src/fortress/ui/tree_1.jpg").getImage();
-	Image image_m = new ImageIcon("src/fortress/ui/missile.jpg").getImage();
-	Image image_b = new ImageIcon("src/fortress/ui/ballet.png").getImage();
+	
 
+	Image image = new ImageIcon("src/fortress/ui/tree.jpg").getImage();
+	Image image_t = new ImageIcon("src/fortress/ui/tree_1.jpg").getImage();
+	Player player = new Player();
 	private int field = 300 - image_t.getHeight(null);
-	private int player_x = 100, player_y = field - image_r.getHeight(null);
 	private int background_x = 0, field_x = 0;
-	private int player_hp = 100;
 	private Bullet bullet = new Bullet();
-	List<String> fieldStr = new ArrayList<>();
-	List<List> fieldList = new ArrayList<>();
+	
 
 	public static void playSound(String PathName, boolean isLoop) {
 		Clip sound;
@@ -61,7 +55,8 @@ public class MyPanel extends JPanel {
 	}
 
 	public MyPanel() {
-		
+		player.setPlayer_y(field);
+		player.setPlayer_x((int)(Math.random()*500));
 		playSound("src/music/music.wav",true);
 		new Thread(new Runnable() {
 
@@ -84,30 +79,21 @@ public class MyPanel extends JPanel {
 				System.out.println(e.getKeyCode());
 				if (e.getKeyCode() == 37) {
 					// background가 이미지크기에 도달할때까지 옆으로 화면이 흐름
-					player_x -= 2;
-					if (player_x < 0) {// 맵의끝에 갔을때
-						player_x = 0;
-						if (background_x != 0) {
-							background_x += 2;
-							field_x += 2;
-						}
+					//player_x -= 2;
+					player.movePlayer_left();// 맵의끝에 갔을때
+					if (background_x != 0 && player.getPlayer_x()==0) {
+						background_x += 2;
+						field_x += 2;
 					}
-					direction = false;// 왼쪽
+					
 				}
 				if (e.getKeyCode() == 39) {
+					player.movePlayer_right();// 오른쪽으로 감
 					if (650 - image_t.getWidth(null) < background_x) {// background가 이미지크기에 도달할때까지 옆으로 화면이 흐름
-						if (player_x == 650 - image_r.getWidth(null)) {// 맵의끝에 갔을때
-
+						if (player.getPlayer_x() >= 650 - player.getImage_r().getWidth(null)) {// 맵의끝에 갔을때
 							background_x -= 2;
 							field_x -= 2;
-
 						}
-
-						player_x += 2;
-						if (player_x > 650 - image_r.getWidth(null))
-							player_x = 650 - image_r.getWidth(null);
-						direction = true;// 오른쪽으로 감
-
 					}
 				}
 				if (e.getKeyCode() == 38) {// 포 각도 조절 위로 조절
@@ -137,7 +123,7 @@ public class MyPanel extends JPanel {
 							int jump_y;
 							int set;
 							int jump_x;
-							if (!direction) {// 왼쪽일때
+							if (!player.isDirection()) {// 왼쪽일때
 								bullet.setVeloX(-1.0);
 								jump_y = (int) (bullet.getPower() * Math.sin(Math.PI + bullet.getRadian()));
 								set = (int) (bullet.getPower() * Math.sin(Math.PI + bullet.getRadian()));
@@ -150,8 +136,8 @@ public class MyPanel extends JPanel {
 							}
 
 							bullet.setShot(true);
-							bullet.setBullet_x(player_x);
-							bullet.setBullet_y(player_y);
+							bullet.setBullet_x(player.getPlayer_x());
+							bullet.setBullet_y(player.getPlayer_y());
 							long t1 = bullet.getTime();
 							long t2;
 
@@ -168,7 +154,7 @@ public class MyPanel extends JPanel {
 									e.printStackTrace();
 								}
 							}
-							while (bullet.getBullet_y() < field - image_b.getHeight(null)) {
+							while (bullet.getBullet_y() < field - bullet.getImage_bullet().getHeight(null)) {
 								t2 = bullet.getTime() - t1;
 								jump_y = set - (int) (t2 / 40);
 								bullet.setBullet_x((int) (bullet.getBullet_x() + jump_x));
@@ -179,11 +165,11 @@ public class MyPanel extends JPanel {
 									e.printStackTrace();
 								}
 							}
-							if (bullet.getBullet_y() > field - image_b.getHeight(null)) {
-								bullet.setBullet_y(field - image_b.getHeight(null));
+							if (bullet.getBullet_y() > field - bullet.getImage_bullet().getHeight(null)) {
+								bullet.setBullet_y(field - bullet.getImage_bullet().getHeight(null));
 							}
-							bullet.setBullet_x(player_x);
-							bullet.setBullet_y(player_y);
+							bullet.setBullet_x(player.getPlayer_x());
+							bullet.setBullet_y(player.getPlayer_y());
 							bullet.setPower(0);
 							bullet.setShot(false);
 
@@ -203,16 +189,18 @@ public class MyPanel extends JPanel {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		
 		g.drawImage(image, background_x, 0, image_t.getWidth(null), 500, null);
 		g.drawImage(image_t, field_x, field, null);
-		if (direction)
-			g.drawImage(image_r, player_x, player_y, null);
+		if (player.isDirection())
+			g.drawImage(player.getImage_r(), player.getPlayer_x(), player.getPlayer_y(), null);
 		else
-			g.drawImage(image_l, player_x, player_y, null);
+			g.drawImage(player.getImage_l(), player.getPlayer_x(), player.getPlayer_y(), null);
 		g.setColor(Color.GREEN);
-		g.fillRect(player_x, player_y - 20, (int) (player_hp / 2), 10);
+		g.fillRect(player.getPlayer_x(), player.getPlayer_y() - 20, (int) (player.getPlayer_hp() / 2), 10);
 		if (bullet.isShot())
-			g.drawImage(bullet.getImage_ballet(), bullet.getBullet_x(), bullet.getBullet_y(), null);
+			g.drawImage(bullet.getImage_bullet(), bullet.getBullet_x(), bullet.getBullet_y(), null);
+		
 
 	}
 

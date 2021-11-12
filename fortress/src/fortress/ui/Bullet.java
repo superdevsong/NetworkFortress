@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 import javax.swing.ImageIcon;
 
 public class Bullet {
-	Image image_ballet = new ImageIcon("src/fortress/ui/ballet.png").getImage();
+	Image image_bullet = new ImageIcon("src/fortress/ui/bullet.png").getImage();
 	private double power =0;
 	private double veloX = 1.0;
 	private double veloY = 1.0;
@@ -36,8 +36,8 @@ public class Bullet {
 	public void setShot(boolean shot) {
 		this.shot = shot;
 	}
-	public Image getImage_ballet() {
-		return image_ballet;
+	public Image getImage_bullet() {
+		return image_bullet;
 	}
 	public double getRadian() {
 		return Math.atan(veloY/veloX);

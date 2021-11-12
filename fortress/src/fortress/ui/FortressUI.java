@@ -68,7 +68,6 @@ public class FortressUI {
 		JPanel panel = new MyPanel();
 		
 		
-		
 		frame.getContentPane().add(panel, BorderLayout.CENTER);
 		panel.setLayout(null);
 		panel.setFocusable(true);
