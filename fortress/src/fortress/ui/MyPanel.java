@@ -10,6 +10,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Vector;
 
 import javax.imageio.ImageIO;
 import javax.sound.sampled.AudioInputStream;
@@ -29,8 +30,12 @@ public class MyPanel extends JPanel {
 
 	Image image = new ImageIcon("src/fortress/ui/tree.jpg").getImage();
 	Image image_t = new ImageIcon("src/fortress/ui/tree_1.jpg").getImage();
-	Player player = new Player();
-	private int field = 300 - image_t.getHeight(null);
+	Vector<Player> playerList = new Vector<Player>();
+	Player now_player;
+	Player player2 = new Player();
+	Player player3 = new Player();
+	int turn = 0;
+	private int field = 300 - image_t.getHeight(null),removeIndex;
 	private int background_x = 0, field_x = 0;
 	private Bullet bullet = new Bullet();
 	
@@ -55,8 +60,14 @@ public class MyPanel extends JPanel {
 	}
 
 	public MyPanel() {
-		player.setPlayer_y(field);
-		player.setPlayer_x((int)(Math.random()*500));
+		playerList.add(player2);
+		playerList.add(player3);
+		now_player = playerList.get(turn++);
+		for(Player player :playerList) {
+			player.setPlayer_y(field);
+			player.setPlayer_x((int)(Math.random()*500));
+		}
+		
 		playSound("src/music/music.wav",true);
 		new Thread(new Runnable() {
 
@@ -80,17 +91,17 @@ public class MyPanel extends JPanel {
 				if (e.getKeyCode() == 37) {
 					// background가 이미지크기에 도달할때까지 옆으로 화면이 흐름
 					//player_x -= 2;
-					player.movePlayer_left();// 맵의끝에 갔을때
-					if (background_x != 0 && player.getPlayer_x()==0) {
+					now_player.movePlayer_left();// 맵의끝에 갔을때
+					if (background_x != 0 && now_player.getPlayer_x()==0) {
 						background_x += 2;
 						field_x += 2;
 					}
 					
 				}
 				if (e.getKeyCode() == 39) {
-					player.movePlayer_right();// 오른쪽으로 감
+					now_player.movePlayer_right();// 오른쪽으로 감
 					if (650 - image_t.getWidth(null) < background_x) {// background가 이미지크기에 도달할때까지 옆으로 화면이 흐름
-						if (player.getPlayer_x() >= 650 - player.getImage_r().getWidth(null)) {// 맵의끝에 갔을때
+						if (now_player.getPlayer_x() >= 650 - now_player.getImage_r().getWidth(null)) {// 맵의끝에 갔을때
 							background_x -= 2;
 							field_x -= 2;
 						}
@@ -116,14 +127,48 @@ public class MyPanel extends JPanel {
 			public void keyReleased(KeyEvent e) {
 
 				if (e.getKeyCode() == 32) {
+					
 					new Thread(new Runnable() {
 						@Override
 						public void run() {
 							playSound("src/music/shooting.wav",false);
+							bullet.setShot(true);
+							bullet.setBullet_x(now_player.getPlayer_x());
+							bullet.setBullet_y(now_player.getPlayer_y());
+							new Thread(new Runnable() {
+								
+
+								@Override
+								public void run() {
+									boolean hit=false;
+									while(true) {
+											for(Player player :playerList) {
+											
+											if(bullet.getBullet_x()<=player.getPlayer_x()+player.getImage_l().getWidth(null)+10&&
+													bullet.getBullet_x()>=player.getPlayer_x()-10&&
+													bullet.getBullet_y()>=player.getPlayer_y()) {
+												if(player==now_player)
+													continue;
+												player.setPlayer_hp(player.getPlayer_hp()-20);
+												hit = true;
+											}
+											}
+									try {
+										Thread.sleep(10);
+									} catch (InterruptedException e) {
+										e.printStackTrace();
+									}
+									if(!bullet.isShot()||hit)
+										break;
+									}
+									
+								}
+								
+							}).start();
 							int jump_y;
 							int set;
 							int jump_x;
-							if (!player.isDirection()) {// 왼쪽일때
+							if (!now_player.isDirection()) {// 왼쪽일때
 								bullet.setVeloX(-1.0);
 								jump_y = (int) (bullet.getPower() * Math.sin(Math.PI + bullet.getRadian()));
 								set = (int) (bullet.getPower() * Math.sin(Math.PI + bullet.getRadian()));
@@ -135,9 +180,7 @@ public class MyPanel extends JPanel {
 								jump_x = (int) (bullet.getPower() * Math.cos(bullet.getRadian()));
 							}
 
-							bullet.setShot(true);
-							bullet.setBullet_x(player.getPlayer_x());
-							bullet.setBullet_y(player.getPlayer_y());
+							
 							long t1 = bullet.getTime();
 							long t2;
 
@@ -148,34 +191,45 @@ public class MyPanel extends JPanel {
 								jump_y = set - (int) (t2 / 40);
 								bullet.setBullet_x((int) (bullet.getBullet_x() + jump_x));
 								bullet.setBullet_y((int) (bullet.getBullet_y() - jump_y));
+								
 								try {
 									Thread.sleep(45);
 								} catch (InterruptedException e) {
 									e.printStackTrace();
 								}
 							}
+							
 							while (bullet.getBullet_y() < field - bullet.getImage_bullet().getHeight(null)) {
 								t2 = bullet.getTime() - t1;
 								jump_y = set - (int) (t2 / 40);
 								bullet.setBullet_x((int) (bullet.getBullet_x() + jump_x));
 								bullet.setBullet_y((int) (bullet.getBullet_y() - jump_y));
+								
 								try {
 									Thread.sleep(45);
 								} catch (InterruptedException e) {
 									e.printStackTrace();
 								}
 							}
+							
 							if (bullet.getBullet_y() > field - bullet.getImage_bullet().getHeight(null)) {
 								bullet.setBullet_y(field - bullet.getImage_bullet().getHeight(null));
 							}
-							bullet.setBullet_x(player.getPlayer_x());
-							bullet.setBullet_y(player.getPlayer_y());
+							bullet.setBullet_x(now_player.getPlayer_x());
+							bullet.setBullet_y(now_player.getPlayer_y());
 							bullet.setPower(0);
 							bullet.setShot(false);
-
+							for(Player player :playerList) {
+								if(player.getPlayer_hp()==0)
+									removeIndex=playerList.indexOf(player);
+							}
+							if(playerList.get(removeIndex).getPlayer_hp()==0)
+							playerList.remove(removeIndex);
+							if(turn>=playerList.size())
+								turn=0;
+							now_player = playerList.get(turn++);
 						}
 					}).start();
-
 				}
 			}
 		});
@@ -189,15 +243,17 @@ public class MyPanel extends JPanel {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
+		g.setColor(Color.GREEN);
 		g.drawImage(image, background_x, 0, image_t.getWidth(null), 500, null);
 		g.drawImage(image_t, field_x, field, null);
-		if (player.isDirection())
-			g.drawImage(player.getImage_r(), player.getPlayer_x(), player.getPlayer_y(), null);
-		else
-			g.drawImage(player.getImage_l(), player.getPlayer_x(), player.getPlayer_y(), null);
-		g.setColor(Color.GREEN);
-		g.fillRect(player.getPlayer_x(), player.getPlayer_y() - 20, (int) (player.getPlayer_hp() / 2), 10);
+		for(Player player :playerList) {
+			if (player.isDirection())
+				g.drawImage(player.getImage_r(), player.getPlayer_x(), player.getPlayer_y(), null);
+			else
+				g.drawImage(player.getImage_l(), player.getPlayer_x(), player.getPlayer_y(), null);
+			g.fillRect(player.getPlayer_x(), player.getPlayer_y() - 20, (int) (player.getPlayer_hp() / 2), 10);
+		}
+		
 		if (bullet.isShot())
 			g.drawImage(bullet.getImage_bullet(), bullet.getBullet_x(), bullet.getBullet_y(), null);
 		
