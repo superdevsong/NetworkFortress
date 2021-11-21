@@ -97,14 +97,13 @@ public class Bullet {
 					jump_x = (int) (power * Math.cos(radian));
 				}
 				System.out.println("y: "+jump_y+" x:"+jump_x);
-				
 				long t1 = getTime();
 				long t2;
 
 				/*
 				 * System.out.println((bullet.getPower() * Math.sin(Math.PI +
 				 * bullet.getRadian())) + " " + (bullet.getPower() * Math.cos(Math.PI +
-				 * bullet.getRadian())));
+				 * bullet.getRadian()))); 포물선값 확인
 				 */
 				while (jump_y > 0) {//속도가 중력가속도를 빼면서 +일떄 상승할때
 					t2 = getTime() - t1;
@@ -150,8 +149,6 @@ public class Bullet {
 			}
 	void checkHit(Player now_player,Vector<Player> playerList) {//bullet에 맞는지 확인
 		new Thread(new Runnable() {
-			
-
 			@Override
 			public void run() {
 				boolean hit=false;

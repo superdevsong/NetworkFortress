@@ -5,16 +5,39 @@ import java.awt.Image;
 import javax.swing.ImageIcon;
 
 public class Player {
+	
 	boolean direction = true;
+	
 	Image image_r = new ImageIcon("src/fortress/ui/cannon.png").getImage();
 	Image image_l = new ImageIcon("src/fortress/ui/cannon_reverse.png").getImage();
 	int range_x,range_y;
 	private int player_x, player_y;
+	private int player_preX;
 	private int player_hp = 100;
+	
+	public void setPlayer_preX(int player_preX) {
+		this.player_preX = player_preX;
+	}
+	public int getPlayer_preX() {
+		return player_preX;
+	}
 	public void movePlayer_left() {
-		if(player_x>0)
 		player_x-=2;
+	}
+	public void movePlayer_right() {
+		player_x+=2;
+	}
+	public void moveNowPlayer_left(boolean edge) {
 		direction=false;
+		if(player_x>=500)
+		player_x-=2;
+		if(edge && player_x>=0)
+			player_x-=2;
+	}
+	public void init(int field) {
+		player_y=field-image_r.getHeight(null);;
+		player_x = (int)(Math.random()*500);
+		player_preX = player_x;
 	}
 	public int getRange_x() {
 		return range_x;
@@ -28,10 +51,12 @@ public class Player {
 	public void setRange_y(int range_y) {
 		this.range_y = range_y;
 	}
-	public void movePlayer_right() {
-		if(player_x<650-image_r.getWidth(null))
-		player_x+=2;
+	public void movePlayer_right(int camera_x,boolean edge) {
 		direction=true;
+		if(player_x< camera_x-image_r.getWidth(null))
+		player_x+=2;
+		if(edge&&player_x< FortressUI.SCREEN_WIDTH-image_r.getWidth(null))//오른쪽으로 어느정도 왔을때 끝까지 이동할수있게 설정
+			player_x+=2;
 	}
 	public int getPlayer_hp() {
 		return player_hp;
@@ -64,6 +89,19 @@ public class Player {
 	}
 	public void setPlayer_y(int field) {
 		this.player_y = field - image_r.getHeight(null);
+	}
+	public int getPlayerLocation() {
+		if(player_x == player_preX)
+			return 0;
+		else if(player_x<player_preX) {
+			player_x+=2;
+			return 2;
+		}
+		else {
+			player_x-=2;
+			return -2;
+		}
+		
 	}
 	
 	

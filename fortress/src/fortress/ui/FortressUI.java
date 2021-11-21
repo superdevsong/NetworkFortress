@@ -27,6 +27,8 @@ import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 
 public class FortressUI {
+	public static final int SCREEN_WIDTH = 960;
+	public static final int SCREEN_HEIGHT = 640;
 
 	private JFrame frame;
 	int x=100,y=200;
@@ -62,7 +64,7 @@ public class FortressUI {
 	private void initialize() {
 		
 		frame = new JFrame();
-		frame.setBounds(100, 100, 650, 500);
+		frame.setBounds(100, 100, SCREEN_WIDTH, SCREEN_HEIGHT);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		
 		JPanel panel = new MyPanel();
