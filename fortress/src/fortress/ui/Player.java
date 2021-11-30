@@ -8,8 +8,8 @@ public class Player {
 	
 	boolean direction = true;
 	
-	Image image_r = new ImageIcon("src/fortress/ui/cannon.png").getImage();
-	Image image_l = new ImageIcon("src/fortress/ui/cannon_reverse.png").getImage();
+	Image image_r = new ImageIcon("src/image/player/player2r_attack.gif").getImage();
+	Image image_l = new ImageIcon("src/image/player/player2_attack.gif").getImage();
 	int range_x,range_y;
 	private int player_x, player_y;
 	private int player_preX;

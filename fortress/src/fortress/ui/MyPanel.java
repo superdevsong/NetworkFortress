@@ -17,6 +17,7 @@ import javax.imageio.ImageIO;
 import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.Clip;
+import javax.sound.sampled.FloatControl;
 import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.UnsupportedAudioFileException;
 import javax.swing.ImageIcon;
@@ -41,8 +42,11 @@ public class MyPanel extends JPanel {
 	private int background_x = 0, field_x = 0;
 	private Bullet bullet = new Bullet();
 	boolean moving = true;
+	boolean attack = true;
 	
-	
+	private void gameEnd() {
+		
+	}
 
 	public static void playSound(String PathName, boolean isLoop) {
 		Clip sound;
@@ -51,6 +55,8 @@ public class MyPanel extends JPanel {
 			File audioFile = new File(PathName);
 			AudioInputStream audioStream = AudioSystem.getAudioInputStream(audioFile);
 			sound.open(audioStream);
+			FloatControl gainControl = (FloatControl) sound.getControl(FloatControl.Type.MASTER_GAIN);
+            gainControl.setValue(-10.0f);
 			sound.start();
 			if (isLoop)
 				sound.loop(Clip.LOOP_CONTINUOUSLY);
@@ -78,7 +84,6 @@ public class MyPanel extends JPanel {
 			public void run() {
 				while(true) {
 				repaint();
-				
 					try {
 						Thread.sleep(10);
 					} catch (InterruptedException e) {
@@ -159,11 +164,14 @@ public class MyPanel extends JPanel {
 			public void keyReleased(KeyEvent e) {
 
 				if (e.getKeyCode() == 32) {
+					if(attack == true) {
 					Thread shooting = new Thread(new Runnable() {
+						
 						
 
 						@Override
 						public void run() {
+							attack=false;
 							synchronized(this){//동기화 해야지만 wait notify처리가능;
 							moving = false;
 							playSound("src/music/shooting.wav",false);
@@ -221,11 +229,16 @@ public class MyPanel extends JPanel {
 									
 							}
 							}
+							if(playerList.size()==1)
+								gameEnd();
 							
-							moving = true;
+							moving = true;//이동가능
+							attack = true;//공격가능
 						}
+
+						
 					}).start();
-					
+					}
 				}
 			}
 		});
