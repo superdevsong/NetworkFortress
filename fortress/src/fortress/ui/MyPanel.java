@@ -9,6 +9,9 @@ import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Vector;
@@ -23,19 +26,24 @@ import javax.sound.sampled.UnsupportedAudioFileException;
 import javax.swing.ImageIcon;
 import javax.swing.JPanel;
 
+import fortress.ui.JavaObjClientView.ImageSendAction;
+import fortress.ui.JavaObjClientView.ListenNetwork;
+import fortress.ui.JavaObjClientView.TextSendAction;
+
 /*코드 전체적인 리펙토링 필요
  * 코드 분배라던가 image를 분리한다던가
  * 이중 버퍼링이라던가 변수 하나로 선언해서 묶는다던가
  * */
 public class MyPanel extends JPanel {
 	
-
+	private ObjectInputStream ois;
+	private ObjectOutputStream oos;
+	private Socket socket; // 연결소켓
 	Image image = new ImageIcon("src/fortress/ui/forest.jpg").getImage();
 	Image image_t = new ImageIcon("src/fortress/ui/tree_1.jpg").getImage();
 	Vector<Player> playerList = new Vector<Player>();
 	Player now_player;
-	Player player2 = new Player();
-	Player player3 = new Player();
+	Player new_player;
 	int turn = 0,camera_x=500;
 	int camera_scale = 0;
 	private int field = 300 - image_t.getHeight(null);
@@ -68,14 +76,98 @@ public class MyPanel extends JPanel {
 			e.printStackTrace();
 		}
 	}
-
-	public MyPanel() {
-		playerList.add(player2);
-		playerList.add(player3);
-		now_player = playerList.get(turn++);
-		for(Player player :playerList) {
-			player.init(field);
+	public void SendObject(Object ob) { // 서버로 메세지를 보내는 메소드
+		try {
+			oos.writeObject(ob);
+		} catch (IOException e) {
+			// textArea.append("메세지 송신 에러!!\n");
+			System.out.println("SendObject Error");
 		}
+	}
+	class ListenNetwork extends Thread {
+		public void run() {
+			while (true) {
+				try {
+				
+
+					Object obcm = null;
+					String msg = null;
+					ChatMsg cm;
+					try {
+						obcm = ois.readObject();
+					} catch (ClassNotFoundException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+						break;
+					}
+					if (obcm == null)
+						break;
+					if (obcm instanceof ChatMsg) {
+						cm = (ChatMsg) obcm;
+						msg = String.format("[%s] %s", cm.getId(), cm.getData());
+					} else
+						continue;
+					switch (cm.getCode()) {
+					case "200": // chat message
+						
+						System.out.println("200"+cm.getData());
+						
+						break;
+					case "100": // chat message
+						System.out.println("100"+cm.getData());
+						new_player = new Player();
+						playerList.add(new_player);
+						new_player.init(field);
+						break;
+					/*
+					 * case "300": // Image 첨부 AppendText("[" + cm.getId() + "]");
+					 * AppendImage(cm.img); break;
+					 */
+					}
+				} catch (IOException e) {
+					System.out.println("ois.readObject() error");
+					try {
+						ois.close();
+						oos.close();
+						socket.close();
+						System.exit(0);
+						break;
+					} catch (Exception ee) {
+						break;
+					} 
+				} 
+			}
+		}
+	}
+	public MyPanel(String username, String ip_addr, String port_no) {
+		try {
+			socket = new Socket(ip_addr, Integer.parseInt(port_no));
+		
+
+			oos = new ObjectOutputStream(socket.getOutputStream());
+			oos.flush();
+			ois = new ObjectInputStream(socket.getInputStream());
+
+			//SendMessage("/login " + UserName);
+			ChatMsg obcm = new ChatMsg(username, "100", "Hello");
+			SendObject(obcm);
+			
+			ListenNetwork net = new ListenNetwork();
+			net.start();
+			
+			
+
+		} catch (NumberFormatException | IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			System.out.println("connect error");
+		}
+
+		playerList.add(new Player());
+		
+		now_player = playerList.get(turn++);
+		now_player.init(field);
+		
 		
 		playSound("src/music/music.wav",true);
 		Thread nt = new Thread(new Runnable() {
@@ -159,6 +251,7 @@ public class MyPanel extends JPanel {
 				}
 
 			}
+			
 
 			@Override
 			public void keyReleased(KeyEvent e) {

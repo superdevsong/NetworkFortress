@@ -141,7 +141,6 @@ public class FortressUI {
 		}
 		
 		public void paint(Graphics g) {
-			System.out.println(Thread.currentThread());
 			g.drawImage(mainImage, 0, 0, null);
 			paintComponents(g);
 			if(alpha==255)
@@ -253,7 +252,7 @@ public class FortressUI {
 					
 						frame.getContentPane().removeAll();
 						
-							JPanel panel = new MyPanel();
+							JPanel panel = new MyPanel(username, ip_addr, port_no);
 							
 							frame.setLayout( new BorderLayout());
 							frame.getContentPane().add(panel, BorderLayout.CENTER);
@@ -268,7 +267,6 @@ public class FortressUI {
 					
 					}
 					}}).start();
-			JavaObjClientView view = new JavaObjClientView(username, ip_addr, port_no);
 			
 		}
 	}
