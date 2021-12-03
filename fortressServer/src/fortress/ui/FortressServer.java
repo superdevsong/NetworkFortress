@@ -42,6 +42,8 @@ public class FortressServer extends JFrame {
 	private Socket client_socket; // accept() 에서 생성된 client 소켓
 	private Vector UserVec = new Vector(); // 연결된 사용자를 저장할 벡터
 	private static final int BUF_LEN = 128; // Windows 처럼 BUF_LEN 을 정의
+	private int player_num = 0;
+	private int turn = 0;
 
 	/**
 	 * Launch the application.
@@ -121,7 +123,7 @@ public class FortressServer extends JFrame {
 					client_socket = socket.accept(); // accept가 일어나기 전까지는 무한 대기중
 					AppendText("새로운 참가자 from " + client_socket);
 					// User 당 하나씩 Thread 생성
-					UserService new_user = new UserService(client_socket);
+					UserService new_user = new UserService(client_socket, player_num++);
 					UserVec.add(new_user); // 새로운 참가자 배열에 추가
 					new_user.start(); // 만든 객체의 스레드 실행
 					AppendText("현재 참가자 수 " + UserVec.size());
@@ -162,10 +164,14 @@ public class FortressServer extends JFrame {
 		private Vector user_vc;
 		public String UserName = "";
 		public String UserStatus;
+		private int player_x, player_y;
+		private int user_player_num = 0;
+		private boolean ready = false;
 
-		public UserService(Socket client_socket) {
+		public UserService(Socket client_socket, int player_num) {
 			// TODO Auto-generated constructor stub
 			// 매개변수로 넘어온 자료 저장
+			user_player_num = player_num;
 			this.client_socket = client_socket;
 			this.user_vc = UserVec;
 			try {
@@ -175,18 +181,28 @@ public class FortressServer extends JFrame {
 				oos.flush();
 				ois = new ObjectInputStream(client_socket.getInputStream());
 
-				
 			} catch (Exception e) {
 				AppendText("userService error");
 			}
+			
 		}
 
-		public void Login() {
+		public void GameJoin() {
 			AppendText("새로운 참가자 " + UserName + " 입장.");
 			/*
 			 * WriteOne("Welcome to Java chat server\n"); WriteOne(UserName + "님 환영합니다.\n");
 			 * // 연결된 사용자에게 정상접속을 알림
-			 */			
+			 */
+			String msg = "[" + UserName + "]님이 입장 하였습니다.\n";
+			WriteOthersGameJoin(msg); // 아직 user_vc에 새로 입장한 user는 포함되지 않았다.
+		}
+
+		public void RoomJoin() {
+			AppendText("새로운 참가자 " + UserName + "대기방 입장.");
+			 WriteOne("Welcome to Java Fortress\n"); 
+			 WriteOne(UserName + "님 환영합니다.\n");
+			 // 연결된 사용자에게 정상접속을 알림
+			 
 			String msg = "[" + UserName + "]님이 입장 하였습니다.\n";
 			WriteOthers(msg); // 아직 user_vc에 새로 입장한 user는 포함되지 않았다.
 		}
@@ -206,6 +222,7 @@ public class FortressServer extends JFrame {
 					user.WriteOne(str);
 			}
 		}
+
 		// 모든 User들에게 Object를 방송. 채팅 message와 image object를 보낼 수 있다
 		public void WriteAllObject(Object ob) {
 			for (int i = 0; i < user_vc.size(); i++) {
@@ -215,24 +232,64 @@ public class FortressServer extends JFrame {
 			}
 		}
 
+		// 모든 User들에게 Object를 방송. 채팅 message와 image object를 보낼 수 있다
+		public void WriteOthersObject(Object ob) {
+			for (int i = 0; i < user_vc.size(); i++) {
+				UserService user = (UserService) user_vc.elementAt(i);
+				if (user != this && user.UserStatus == "O")
+					user.WriteOneObject(ob);
+			}
+		}
+
 		// 나를 제외한 User들에게 방송. 각각의 UserService Thread의 WriteONe() 을 호출한다.
 		public void WriteOthers(String str) {
 			for (int i = 0; i < user_vc.size(); i++) {
 				UserService user = (UserService) user_vc.elementAt(i);
 				if (user != this && user.UserStatus == "O")
-					user.WriteLogin(str);
+					user.WriteOne(str);
 			}
 		}
-		// User들의 목록을 방송. 각각의 UserService Thread의 WriteONe() 을 호출한다.
-				public void WriteListMe() {
-					
-					for (int i = 0; i < user_vc.size(); i++) {
-						UserService user = (UserService) user_vc.elementAt(i);
-						if (user != this && user.UserStatus == "O")
-							WriteLogin(user.UserName);
-					}
-				}
 
+		// 나를 제외한 User들에게 로그인 사실을 방송. 각각의 UserService Thread의 WriteLogin() 을 호출한다.
+		public void WriteOthersGameJoin(String str) {
+			for (int i = 0; i < user_vc.size(); i++) {
+				UserService user = (UserService) user_vc.elementAt(i);
+				if (user != this && user.UserStatus == "O")
+					user.WriteGameJoin(str, player_x, player_y);
+			}
+		}
+
+		// User들의 목록을 방송. 각각의 UserService Thread의 WriteONe() 을 호출한다.
+		public void WriteListMe() {
+
+			for (int i = 0; i < user_vc.size(); i++) {
+				UserService user = (UserService) user_vc.elementAt(i);
+				if (user != this && user.UserStatus == "O") {
+					ChatMsg obcm = new ChatMsg("SERVER", "500", user.UserName + " : " + user.player_x, user.player_x,
+							user.player_y);
+					WriteOneObject(obcm);
+				}
+			}
+		}
+		public void ReadyCheck() {//준비가 되었는지 확인 다되어있으면 시작
+			ready = true;
+			if(user_vc.size()==1)
+				return;
+			for (int i = 0; i < user_vc.size(); i++) {
+				UserService user = (UserService) user_vc.elementAt(i);
+				if (user != this && user.UserStatus == "O") {
+					if(user.ready==false)
+						return;
+				}
+			}
+			GameStart();
+			
+		}
+		public void GameStart() {
+			ChatMsg obcm = new ChatMsg("SERVER", "499", "GameStart"+ " : ",-10,-10);
+			WriteAllObject(obcm);
+			
+		}
 		// Windows 처럼 message 제외한 나머지 부분은 NULL 로 만들기 위한 함수
 		public byte[] MakePacket(String msg) {
 			byte[] packet = new byte[BUF_LEN];
@@ -258,7 +315,7 @@ public class FortressServer extends JFrame {
 //				byte[] bb;
 //				bb = MakePacket(msg);
 //				dos.write(bb, 0, bb.length);
-				ChatMsg obcm = new ChatMsg("SERVER", "200", msg);
+				ChatMsg obcm = new ChatMsg("SERVER", "200", msg, player_x, player_y);
 				oos.writeObject(obcm);
 			} catch (IOException e) {
 				AppendText("dos.writeObject() error");
@@ -278,9 +335,10 @@ public class FortressServer extends JFrame {
 				Logout(); // 에러가난 현재 객체를 벡터에서 지운다
 			}
 		}
-		public void WriteLogin(String msg) {
+
+		public void WriteGameJoin(String msg, int player_x, int player_y) {
 			try {
-				ChatMsg obcm = new ChatMsg("SERVER", "100", msg);
+				ChatMsg obcm = new ChatMsg("SERVER", "500", msg, player_x, player_y);
 				oos.writeObject(obcm);
 			} catch (IOException e) {
 				AppendText("dos.writeObject() error");
@@ -303,7 +361,7 @@ public class FortressServer extends JFrame {
 		// 귓속말 전송
 		public void WritePrivate(String msg) {
 			try {
-				ChatMsg obcm = new ChatMsg("귓속말", "200", msg);
+				ChatMsg obcm = new ChatMsg("귓속말", "200", msg, player_x, player_y);
 				oos.writeObject(obcm);
 			} catch (IOException e) {
 				AppendText("dos.writeObject() error");
@@ -320,19 +378,19 @@ public class FortressServer extends JFrame {
 				Logout(); // 에러가난 현재 객체를 벡터에서 지운다
 			}
 		}
+
 		public void WriteOneObject(Object ob) {
 			try {
-			    oos.writeObject(ob);
-			} 
-			catch (IOException e) {
-				AppendText("oos.writeObject(ob) error");		
+				oos.writeObject(ob);
+			} catch (IOException e) {
+				AppendText("oos.writeObject(ob) error");
 				try {
 					ois.close();
 					oos.close();
 					client_socket.close();
 					client_socket = null;
 					ois = null;
-					oos = null;				
+					oos = null;
 				} catch (IOException e1) {
 					// TODO Auto-generated catch block
 					e1.printStackTrace();
@@ -340,7 +398,23 @@ public class FortressServer extends JFrame {
 				Logout();
 			}
 		}
-		
+
+		public void isTurn(int turn) {
+			if (turn == user_player_num) {
+				ChatMsg obcm = new ChatMsg("SERVER", "600", "youtr turn", player_x, player_y);
+				WriteOneObject(obcm);
+			}
+
+		}
+
+		public void Turns() {
+			for (int i = 0; i < user_vc.size(); i++) {
+				UserService user = (UserService) user_vc.elementAt(i);
+
+				user.isTurn(turn);
+			}
+		}
+
 		public void run() {
 			while (true) { // 사용자 접속을 계속해서 받기 위해 while문
 				try {
@@ -369,6 +443,7 @@ public class FortressServer extends JFrame {
 						break;
 					try {
 						obcm = ois.readObject();
+
 					} catch (ClassNotFoundException e) {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
@@ -381,11 +456,15 @@ public class FortressServer extends JFrame {
 						AppendObject(cm);
 					} else
 						continue;
-					if (cm.getCode().matches("100")) {
+					 if (cm.getCode().matches("100")) {
 						UserName = cm.getId();
 						UserStatus = "O"; // Online 상태
-						Login();
+						RoomJoin();
+					}
+					else if (cm.getCode().matches("500")) {
+						GameJoin();
 						WriteListMe();
+						isTurn(turn);
 					} else if (cm.getCode().matches("200")) {
 						msg = String.format("[%s] %s", cm.getId(), cm.getData());
 						AppendText(msg); // server 화면에 출력
@@ -420,26 +499,38 @@ public class FortressServer extends JFrame {
 									}
 									// /to 빼고.. [귓속말] [user1] Hello user2..
 									user.WritePrivate(args[0] + " " + msg2 + "\n");
-									//user.WriteOne("[귓속말] " + args[0] + " " + msg2 + "\n");
+									// user.WriteOne("[귓속말] " + args[0] + " " + msg2 + "\n");
 									break;
 								}
 							}
 						} else { // 일반 채팅 메시지
 							UserStatus = "O";
-							//WriteAll(msg + "\n"); // Write All
+							// WriteAll(msg + "\n"); // Write All
 							WriteAllObject(cm);
 						}
-					} else if (cm.getCode().matches("400")) { // logout message 처리
+					} else if (cm.getCode().matches("201")) { // logout message 처리
 						Logout();
 						break;
 					} else if (cm.getCode().matches("300")) {
 						WriteAllObject(cm);
+					} else if (cm.getCode().matches("400")) {
+						ReadyCheck();
+					} else if (cm.getCode().matches("601")) {
+						turn++;
+						if (user_vc.size() == turn)
+							turn = 0;
+						WriteOthersObject(cm);
+						Turns();
+					} else if (cm.getCode().matches("700")) {
+						player_x = cm.getPlayer_x();
+						player_y = cm.getPlayer_y();
+						WriteOthersObject(cm);
+						AppendText(cm.getData());
 					}
 				} catch (IOException e) {
 					AppendText("ois.readObject() error");
 					try {
-//						dos.close();
-//						dis.close();
+//					
 						ois.close();
 						oos.close();
 						client_socket.close();

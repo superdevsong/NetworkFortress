@@ -34,9 +34,9 @@ public class Player {
 		if(edge && player_x>=0)
 			player_x-=2;
 	}
-	public void init(int field) {
+	public void init(int field, int x) {
 		player_y=field-image_r.getHeight(null);;
-		player_x = (int)(Math.random()*500);
+		player_x =x; /*일단 0으로 주어짐 (int)(Math.random()*500); */
 		player_preX = player_x;
 	}
 	public int getRange_x() {

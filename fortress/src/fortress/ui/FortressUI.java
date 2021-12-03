@@ -22,6 +22,9 @@ import javax.swing.plaf.basic.BasicOptionPaneUI.ButtonActionListener;
 
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionAdapter;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.net.Socket;
 
 import javax.swing.JFormattedTextField;
 import javax.swing.JEditorPane;
@@ -46,6 +49,9 @@ public class FortressUI {
 	int x=100,y=200;
 	int alpha=0;
 	int direction=1;
+	private ObjectInputStream ois;
+	private ObjectOutputStream oos;
+	private Socket socket; // 연결소켓
 	
 
 	private Image mainImage = new ImageIcon("src/image/Title.jpg").getImage();
@@ -204,7 +210,6 @@ public class FortressUI {
 		frame.getContentPane().add(intro_panel, BorderLayout.CENTER);
 		
 		
-		
 
 	}
 	class Myaction implements ActionListener // 내부클래스로 액션 이벤트 처리 클래스
@@ -214,6 +219,7 @@ public class FortressUI {
 			String username = txtUserName.getText().trim();
 			String ip_addr = txtIpAddress.getText().trim();
 			String port_no = txtPortNumber.getText().trim();
+			
 			Thread start = new Thread(new Runnable() {
 
 				@Override
@@ -250,18 +256,19 @@ public class FortressUI {
 							e.printStackTrace();
 						}
 					
-						frame.getContentPane().removeAll();
+						frame.getContentPane().removeAll();//프레임을 비우고
 						
-							JPanel panel = new MyPanel(username, ip_addr, port_no);
+//							JPanel panel = new MyPanel(username, ip_addr, port_no);
+							JPanel panel = new Room(username, ip_addr, port_no,frame);
 							
 							frame.setLayout( new BorderLayout());
-							frame.getContentPane().add(panel, BorderLayout.CENTER);
-							frame.revalidate();
+							frame.getContentPane().add(panel, BorderLayout.CENTER);//새로운 패널을 추가한뒤
+							frame.revalidate();//재확인한다. 그럼 패널이 바뀌어있음
 							
 							panel.setLayout(null);
 							panel.setFocusable(true);
 							panel.setVisible(true);
-							panel.grabFocus();
+							panel.grabFocus();//패널이 포커스를 가져온다.
 							
 							
 					
