@@ -194,7 +194,15 @@ public class FortressServer extends JFrame {
 			 * // 연결된 사용자에게 정상접속을 알림
 			 */
 			String msg = "[" + UserName + "]님이 입장 하였습니다.\n";
-			WriteOthersGameJoin(msg); // 아직 user_vc에 새로 입장한 user는 포함되지 않았다.
+			for (int i = 0; i < user_vc.size(); i++) {
+				UserService user = (UserService) user_vc.elementAt(i);
+				if (user != this && user.UserStatus == "O") {
+					ChatMsg obcm = new ChatMsg("SERVER", "200", msg, -10, -10);
+					
+					user.WriteOneObject(obcm);
+				}
+				
+			} // 아직 user_vc에 새로 입장한 user는 포함되지 않았다.
 		}
 
 		public void RoomJoin() {
@@ -231,6 +239,20 @@ public class FortressServer extends JFrame {
 					user.WriteOneObject(ob);
 			}
 		}
+		public void WriteAllGameStart(Object ob) {//전체한테 게임시작 메시지 보내는김에 
+			for (int i = 0; i < user_vc.size(); i++) {
+				try {
+					
+					sleep(1000);//이렇게 처리안하면 왠지 모르게 ois 오류가 뜸
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				UserService user = (UserService) user_vc.elementAt(i);
+				if (user.UserStatus == "O")
+					user.WriteOneObject(ob);
+			}
+		}
 
 		// 모든 User들에게 Object를 방송. 채팅 message와 image object를 보낼 수 있다
 		public void WriteOthersObject(Object ob) {
@@ -250,23 +272,22 @@ public class FortressServer extends JFrame {
 			}
 		}
 
-		// 나를 제외한 User들에게 로그인 사실을 방송. 각각의 UserService Thread의 WriteLogin() 을 호출한다.
-		public void WriteOthersGameJoin(String str) {
-			for (int i = 0; i < user_vc.size(); i++) {
-				UserService user = (UserService) user_vc.elementAt(i);
-				if (user != this && user.UserStatus == "O")
-					user.WriteGameJoin(str, player_x, player_y);
-			}
-		}
 
-		// User들의 목록을 방송. 각각의 UserService Thread의 WriteONe() 을 호출한다.
+
+		// User들의 목록을 방송. 게임시작할때 인원을 받아서 화면에 처리하기위함
 		public void WriteListMe() {
 
 			for (int i = 0; i < user_vc.size(); i++) {
 				UserService user = (UserService) user_vc.elementAt(i);
-				if (user != this && user.UserStatus == "O") {
-					ChatMsg obcm = new ChatMsg("SERVER", "500", user.UserName + " : " + user.player_x, user.player_x,
+				if (user != this && user.UserStatus == "O") {//다른플레이어일때
+					ChatMsg obcm = new ChatMsg("user", "500",  user.UserName , user.player_x,
 							user.player_y);
+					obcm.setPlayer_num(user.user_player_num);//player_num를 통해 클라이언트에서 player를 찾을것이므로 정보가 필요함 
+					WriteOneObject(obcm);
+				}
+				else if  (user == this ) {//자신이 맞으면 myplayer넣어야 되므로 이렇게 보냄
+					ChatMsg obcm = new ChatMsg("SERVER", "501",  UserName, player_x,player_y);
+					obcm.setPlayer_num(user_player_num);//player_num를 통해 클라이언트에서 player를 찾을것이므로 정보가 필요함 
 					WriteOneObject(obcm);
 				}
 			}
@@ -287,7 +308,11 @@ public class FortressServer extends JFrame {
 		}
 		public void GameStart() {
 			ChatMsg obcm = new ChatMsg("SERVER", "499", "GameStart"+ " : ",-10,-10);
-			WriteAllObject(obcm);
+			for (int i = 0; i < user_vc.size(); i++) {
+				UserService user = (UserService) user_vc.elementAt(i);
+					user.player_x=(int)(Math.random()*450);
+			}
+			WriteAllGameStart(obcm);
 			
 		}
 		// Windows 처럼 message 제외한 나머지 부분은 NULL 로 만들기 위한 함수
@@ -336,27 +361,7 @@ public class FortressServer extends JFrame {
 			}
 		}
 
-		public void WriteGameJoin(String msg, int player_x, int player_y) {
-			try {
-				ChatMsg obcm = new ChatMsg("SERVER", "500", msg, player_x, player_y);
-				oos.writeObject(obcm);
-			} catch (IOException e) {
-				AppendText("dos.writeObject() error");
-				try {
-//					
-					ois.close();
-					oos.close();
-					client_socket.close();
-					client_socket = null;
-					ois = null;
-					oos = null;
-				} catch (IOException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				}
-				Logout(); // 에러가난 현재 객체를 벡터에서 지운다
-			}
-		}
+		
 
 		// 귓속말 전송
 		public void WritePrivate(String msg) {
@@ -461,7 +466,7 @@ public class FortressServer extends JFrame {
 						UserStatus = "O"; // Online 상태
 						RoomJoin();
 					}
-					else if (cm.getCode().matches("500")) {
+					else if (cm.getCode().matches("500")) {//플레이어 게임 입장처리
 						GameJoin();
 						WriteListMe();
 						isTurn(turn);
@@ -524,9 +529,17 @@ public class FortressServer extends JFrame {
 					} else if (cm.getCode().matches("700")) {
 						player_x = cm.getPlayer_x();
 						player_y = cm.getPlayer_y();
+						cm.setPlayer_num(user_player_num);
 						WriteOthersObject(cm);
 						AppendText(cm.getData());
 					}
+					 else if (cm.getCode().matches("701")) {
+							player_x = cm.getPlayer_x();
+							player_y = cm.getPlayer_y();
+							cm.setPlayer_num(user_player_num);
+							WriteOthersObject(cm);
+							AppendText(cm.getData());
+						}
 				} catch (IOException e) {
 					AppendText("ois.readObject() error");
 					try {

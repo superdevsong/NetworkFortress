@@ -96,7 +96,13 @@ public class Room extends JPanel {
 						System.out.println(ois+"존");
 						System.out.println(oos+"존");
 						AppendText("게임을 시작합니다.");
-						JPanel panel = new MyPanel(UserName,ois,oos,socket);
+						try {
+							sleep(1000);
+						} catch (InterruptedException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+						JPanel panel = new MyPanel(ois,oos,socket);
 						frame.getContentPane().removeAll();//프레임을 비우고
 						frame.setLayout( new BorderLayout());
 						frame.getContentPane().add(panel, BorderLayout.CENTER);//새로운 패널을 추가한뒤
@@ -164,7 +170,7 @@ public class Room extends JPanel {
 		AppendText("User " + username + " connecting " + ip_addr + " " + port_no);
 		UserName = username;
 		lblUserName.setText(username);
-		readyBtn = new JButton("ready");//준비 
+		readyBtn = new JButton("준 비");//준비 
 		readyBtn.setFont(new Font("굴림", Font.PLAIN, 16));
 		readyBtn.setBounds(12, 489, 50, 40);
 		add(readyBtn);

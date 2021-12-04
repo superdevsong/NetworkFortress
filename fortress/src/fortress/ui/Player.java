@@ -13,8 +13,22 @@ public class Player {
 	int range_x,range_y;
 	private int player_x, player_y;
 	private int player_preX;
+	private String user_name;
+	private int player_num;
 	private int player_hp = 100;
-	
+	public Player(int player_num) {
+		this.player_num = player_num;
+	}
+	public void player_move(int player_num,int player_x) {
+		if(this.player_num ==player_num)
+			this.player_x = player_x;
+	}
+	public String getUser_name() {
+		return user_name;
+	}
+	public void setUser_name(String user_name) {
+		this.user_name = user_name;
+	}
 	public void setPlayer_preX(int player_preX) {
 		this.player_preX = player_preX;
 	}

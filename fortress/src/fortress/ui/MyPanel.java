@@ -95,7 +95,7 @@ public class MyPanel extends JPanel {
 					try {
 						obcm = ois.readObject();
 					} catch (ClassNotFoundException e) {
-						
+
 						e.printStackTrace();
 						break;
 					}
@@ -113,10 +113,20 @@ public class MyPanel extends JPanel {
 
 						break;
 					case "500": // chat message
-						System.out.println("500" + cm.getData());
-						new_player = new Player();
+						System.out.println("500" + cm.getData() + " player_num:" + cm.getPlayer_num());
+						new_player = new Player(cm.getPlayer_num());
+						if (playerList.size() == 0)
+							now_player = new_player;
 						playerList.add(new_player);
 						new_player.init(field, cm.getPlayer_x());
+						break;
+					case "501": // chat message
+						System.out.println("501 myplayer" + cm.getData() + " player_num:" + cm.getPlayer_num());
+						my_player = new Player(cm.getPlayer_num());
+						if (playerList.size() == 0)
+							now_player = my_player;
+						playerList.add(my_player);
+						my_player.init(field, cm.getPlayer_x());
 						break;
 					case "600": // chat message
 						System.out.println("600 is your turn");
@@ -130,12 +140,18 @@ public class MyPanel extends JPanel {
 						break;
 					case "601": // chat message
 						System.out.println("601 is next  turn");
+						player_attack();
 						if (turn >= playerList.size())
 							turn = 0;
 						now_player = playerList.get(turn++);
 						break;
-					case "700": // chat message
-						System.out.println("700 is going = " + cm.getPlayer_x());
+					case "700": // 다른 플레잉어의 이동신호
+						System.out.println("700 is going = " + cm.getData());
+						move_right();
+						break;
+					case "701": // 다른 플레잉어의 이동신호
+						System.out.println("701 is going = " + cm.getData());
+						move_left();
 						break;
 					/*
 					 * case "300": // Image 첨부 AppendText("[" + cm.getId() + "]");
@@ -154,23 +170,16 @@ public class MyPanel extends JPanel {
 		}
 	}
 
-	public MyPanel(String username, ObjectInputStream new_ois,ObjectOutputStream new_oos, Socket new_socket) {// 연결소켓
+	public MyPanel(ObjectInputStream new_ois, ObjectOutputStream new_oos, Socket new_socket) {// 연결소켓
 
-		playerList.add(new Player());
-
-		now_player = playerList.get(turn++);
-		now_player.init(field, 0);
-		my_player = now_player;
-
-		socket = new_socket;
-		oos = new_oos;
-		
-		ois = new_ois;
-		System.out.println(ois+"존재");
-		System.out.println(oos+"존재");
+		this.socket = new_socket;
+		this.oos = new_oos;
+		this.ois = new_ois;
+		System.out.println(ois + "존재");
+		System.out.println(oos + "존재");
 
 		// SendMessage("/login " + UserName);
-		ChatMsg obcm = new ChatMsg(username, "500", "Hello", now_player.getPlayer_x(), now_player.getPlayer_y());
+		ChatMsg obcm = new ChatMsg(null, "500", "gamejoin", -10, -10);
 		// 로그인 사실을 알림와 동시에 초기 위치 알림
 		SendObject(obcm);
 		ListenNetwork net = new ListenNetwork();
@@ -203,49 +212,14 @@ public class MyPanel extends JPanel {
 
 					System.out.println(e.getKeyCode());
 					if (e.getKeyCode() == 37) {
-						// background가 이미지크기에 도달할때까지 옆으로 화면이 흐름
-						// player_x -= 2;
-
-						if (background_x != 0) {// 맵의 중앙에서 배경이 흐를수 있을때
-							now_player.moveNowPlayer_left(false);// 왼쪽으로 이동
-
-							if (now_player.getPlayer_x() <= camera_x) {// 맵에 오른쪽에 있을수 있으므로 그럴때는 이렇게 camera의 위치를 고려하여 이동
-								background_x += 2;
-								field_x += 2;
-								for (Player player : playerList) {
-									if (player != now_player)
-										player.movePlayer_right();
-								}
-							}
-						} else if (background_x == 0)// 맵의 중앙에서 배경이 끝에 도달해 더이상 흐르지 못할때
-							now_player.moveNowPlayer_left(true);// 왼쪽으로 이동
-						ChatMsg obcm = new ChatMsg(username, "700", "move left", now_player.getPlayer_x(),
+						move_left();
+						ChatMsg obcm = new ChatMsg(now_player.getUser_name(), "701", "move left", now_player.getPlayer_x(),
 								now_player.getPlayer_y());
-						SendObject(obcm);
-
+						SendObject(obcm);// 이동 내용을 보냄
 					}
 					if (e.getKeyCode() == 39) {
-
-						if (FortressUI.SCREEN_WIDTH - image_t.getWidth(null) < background_x) {// 백그라운드 이미지 크기만큼 이동이 가능하다
-																								// 만약에 백글아운드를 초과하면 else
-																								// if로 넘어가 중앙에서 끝까지 이동함
-							now_player.movePlayer_right(camera_x, false);// 플레이어의 카메라영역을 끝으로 지정하고 이동
-							if (now_player.getPlayer_x() >= camera_x - now_player.getImage_r().getWidth(null)) {// 맵의끝에
-																												// 갔을때
-								background_x -= 2;
-								field_x -= 2;
-								for (Player player : playerList) {
-									if (player != now_player)
-										player.movePlayer_left();
-								}
-							}
-						} else if (FortressUI.SCREEN_WIDTH - image_t.getWidth(null) >= background_x) {// 백그라운드 이미지가 더이상
-																										// 오른쪽으로 흐를 크기가
-																										// 없을때
-							now_player.movePlayer_right(camera_x, true);// player가 화면끝까지 이동할수있도록이동
-						}
-						ChatMsg obcm = new ChatMsg(username, "700", "move right", now_player.getPlayer_x(),
-								now_player.getPlayer_y());
+						move_right();
+						ChatMsg obcm = new ChatMsg(now_player.getUser_name(), "700", "move right", now_player.getPlayer_x(), now_player.getPlayer_y());
 						SendObject(obcm);
 					}
 					if (e.getKeyCode() == 38) {// 포 각도 조절 위로 조절
@@ -270,82 +244,128 @@ public class MyPanel extends JPanel {
 
 				if (e.getKeyCode() == 32) {
 					if (attack == true) {
-						Thread shooting = new Thread(new Runnable() {
-
-							@Override
-							public void run() {
-								attack = false;
-								synchronized (this) {// 동기화 해야지만 wait notify처리가능;
-									moving = false;
-									playSound("src/music/shooting.wav", false);
-									bullet.shotBullet(now_player, playerList, field);
-									notify();// notify 즉 접근 가능 신호 보냄
-								}
-
-							}
-
-						});
-						shooting.setDaemon(true);
-						shooting.start();
-
-						new Thread(new Runnable() {
-
-							@Override
-							public void run() {
-								synchronized (shooting) {// 동기화 해야지만 wait notify처리가능;
-									try {
-										shooting.wait();// 동기화한 shooting 동기화 블럭 부분 끝났으면 실행가능;
-									} catch (InterruptedException e) {
-										// TODO Auto-generated catch block
-										e.printStackTrace();
-									}
-									now_player.setPlayer_preX(now_player.getPlayer_x());
-									if (turn >= playerList.size())
-										turn = 0;
-									now_player = playerList.get(turn++);
-									int result;
-									while (true) {
-										result = now_player.getPlayerLocation();
-										if (result == 0)
-											break;
-										else if (result == -2) {// 이전 플레이어 위치가 더높을때 즉 배경이 왼쪽으로 흘렀으므로 오른쪽으로 이동시키고 상대플레이어도
-																// 오른쪽으로 이동시켜야됨
-											background_x += result;
-											field_x += result;
-											for (Player player : playerList) {
-												if (player != now_player)
-													player.movePlayer_left();
-											}
-										} else if (result == 2) {
-											background_x += result;
-											field_x += result;
-											for (Player player : playerList) {
-												if (player != now_player)
-													player.movePlayer_right();
-											}
-										}
-										try {
-											Thread.sleep(10);
-										} catch (InterruptedException e) {
-											e.printStackTrace();
-										}
-
-									}
-								}
-								if (playerList.size() == 1)
-									gameEnd();
-
-								ChatMsg obcm = new ChatMsg(username, "601", "move right", now_player.getPlayer_x(),
-										now_player.getPlayer_y());
-								SendObject(obcm);
-							}
-
-						}).start();
+						player_attack();
+						ChatMsg obcm = new ChatMsg(now_player.getUser_name(), "601", "next turn", now_player.getPlayer_x(),
+								now_player.getPlayer_y());
+						SendObject(obcm);
 					}
 				}
 			}
 		});
 
+	}
+
+	public void move_left() {//왼쪽으로 움직임
+		// background가 이미지크기에 도달할때까지 옆으로 화면이 흐름
+		// player_x -= 2;
+
+		if (background_x != 0) {// 맵의 중앙에서 배경이 흐를수 있을때
+			now_player.moveNowPlayer_left(false);// 왼쪽으로 이동
+
+			if (now_player.getPlayer_x() <= camera_x) {// 맵에 오른쪽에 있을수 있으므로 그럴때는 이렇게 camera의 위치를 고려하여 이동
+				background_x += 2;
+				field_x += 2;
+				for (Player player : playerList) {
+					if (player != now_player)
+						player.movePlayer_right();
+				}
+			}
+		} else if (background_x == 0)// 맵의 중앙에서 배경이 끝에 도달해 더이상 흐르지 못할때
+			now_player.moveNowPlayer_left(true);// 왼쪽으로 이동
+		
+	}
+
+	public void move_right() {//오른쪽으로 움직임
+		if (FortressUI.SCREEN_WIDTH - image_t.getWidth(null) < background_x) {// 백그라운드 이미지 크기만큼 이동이 가능하다
+			// 만약에 백글아운드를 초과하면 else
+			// if로 넘어가 중앙에서 끝까지 이동함
+			now_player.movePlayer_right(camera_x, false);// 플레이어의 카메라영역을 끝으로 지정하고 이동
+			if (now_player.getPlayer_x() >= camera_x - now_player.getImage_r().getWidth(null)) {// 맵의끝에
+				// 갔을때
+				background_x -= 2;
+				field_x -= 2;
+				for (Player player : playerList) {
+					if (player != now_player)
+						player.movePlayer_left();
+				}
+			}
+		} else if (FortressUI.SCREEN_WIDTH - image_t.getWidth(null) >= background_x) {// 백그라운드 이미지가 더이상
+			// 오른쪽으로 흐를 크기가
+			// 없을때
+			now_player.movePlayer_right(camera_x, true);// player가 화면끝까지 이동할수있도록이동
+		}
+		
+	}
+	public void player_attack(){//포탄쏘기
+		Thread shooting = new Thread(new Runnable() {
+
+			@Override
+			public void run() {
+				attack = false;
+				synchronized (this) {// 동기화 해야지만 wait notify처리가능;
+					moving = false;
+					playSound("src/music/shooting.wav", false);
+					bullet.shotBullet(now_player, playerList, field);
+					notify();// notify 즉 접근 가능 신호 보냄
+				}
+
+			}
+
+		});
+		shooting.setDaemon(true);
+		shooting.start();
+
+		new Thread(new Runnable() {
+
+			@Override
+			public void run() {
+				synchronized (shooting) {// 동기화 해야지만 wait notify처리가능;
+					try {
+						shooting.wait();// 동기화한 shooting 동기화 블럭 부분 끝났으면 실행가능;
+					} catch (InterruptedException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+					now_player.setPlayer_preX(now_player.getPlayer_x());
+					if (turn >= playerList.size())
+						turn = 0;
+					now_player = playerList.get(turn++);
+					int result;
+					while (true) {
+						result = now_player.getPlayerLocation();
+						if (result == 0)
+							break;
+						else if (result == -2) {// 이전 플레이어 위치가 더높을때 즉 배경이 왼쪽으로 흘렀으므로 오른쪽으로 이동시키고 상대플레이어도
+												// 오른쪽으로 이동시켜야됨
+							background_x += result;
+							field_x += result;
+							for (Player player : playerList) {
+								if (player != now_player)
+									player.movePlayer_left();
+							}
+						} else if (result == 2) {
+							background_x += result;
+							field_x += result;
+							for (Player player : playerList) {
+								if (player != now_player)
+									player.movePlayer_right();
+							}
+						}
+						try {
+							Thread.sleep(10);
+						} catch (InterruptedException e) {
+							e.printStackTrace();
+						}
+
+					}
+				}
+				if (playerList.size() == 1)
+					gameEnd();
+
+				
+			}
+
+		}).start();
 	}
 
 	@Override
@@ -361,6 +381,7 @@ public class MyPanel extends JPanel {
 		g.drawImage(image, background_x, 0, image.getWidth(null), image.getHeight(null), null);
 		g.drawImage(image_t, field_x, field, null);
 		for (Player player : playerList) {
+
 			if (player.isDirection())
 				g.drawImage(player.getImage_r(), player.getPlayer_x(), player.getPlayer_y(), null);
 			else
