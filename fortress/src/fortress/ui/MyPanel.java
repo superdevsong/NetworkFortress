@@ -130,28 +130,59 @@ public class MyPanel extends JPanel {
 						break;
 					case "600": // chat message
 						System.out.println("600 is your turn");
-						while (now_player != my_player) {
-							if (turn >= playerList.size())
-								turn = 0;
-							now_player = playerList.get(turn++);
-						}
-						moving = true;// 이동가능
-						attack = true;// 공격가능
+						next_turn(my_player);
+						
 						break;
-					case "601": // chat message
+					case "601": // 다음턴
 						System.out.println("601 is next  turn");
-						player_attack();
-						if (turn >= playerList.size())
-							turn = 0;
-						now_player = playerList.get(turn++);
+						for (Player player : playerList) {
+							if (player.getPlayer_num() == cm.getPlayer_num())
+								next_turn(player);
+						}
 						break;
-					case "700": // 다른 플레잉어의 이동신호
+					case "700": // 다른 플레잉어의 이동신호 오른쪽
 						System.out.println("700 is going = " + cm.getData());
 						move_right();
 						break;
-					case "701": // 다른 플레잉어의 이동신호
+					case "701": // 다른 플레잉어의 이동신호 왼쪽
 						System.out.println("701 is going = " + cm.getData());
 						move_left();
+						break;
+					case "705": // 다른 플레잉어의 공격신호
+						System.out.println("705 is attack = " + cm.getData());
+						Thread shooting = new Thread(new Runnable() {
+							@Override
+							public void run() {
+								synchronized (this) {
+									player_attack();//공격신호를 알리자
+									System.out.println("내려옴");
+									notify();// notify 즉 접근 가능 신호 보냄
+									
+								}
+							}
+
+						});
+						shooting.setDaemon(true);
+						shooting.start();
+						 new Thread(new Runnable() {
+								@Override
+								public void run() {
+									synchronized (shooting) {
+										try {
+											shooting.wait();
+										} catch (InterruptedException e) {
+											// TODO Auto-generated catch block
+											e.printStackTrace();
+										}
+										
+										ChatMsg obcm1 = new ChatMsg(now_player.getUser_name(), "710", "attack complete",
+												-10, -10);
+										SendObject(obcm1);
+									}
+								}
+
+							}).start();;
+						
 						break;
 					/*
 					 * case "300": // Image 첨부 AppendText("[" + cm.getId() + "]");
@@ -213,13 +244,14 @@ public class MyPanel extends JPanel {
 					System.out.println(e.getKeyCode());
 					if (e.getKeyCode() == 37) {
 						move_left();
-						ChatMsg obcm = new ChatMsg(now_player.getUser_name(), "701", "move left", now_player.getPlayer_x(),
-								now_player.getPlayer_y());
+						ChatMsg obcm = new ChatMsg(now_player.getUser_name(), "701", "move left",
+								now_player.getPlayer_x(), now_player.getPlayer_y());
 						SendObject(obcm);// 이동 내용을 보냄
 					}
 					if (e.getKeyCode() == 39) {
 						move_right();
-						ChatMsg obcm = new ChatMsg(now_player.getUser_name(), "700", "move right", now_player.getPlayer_x(), now_player.getPlayer_y());
+						ChatMsg obcm = new ChatMsg(now_player.getUser_name(), "700", "move right",
+								now_player.getPlayer_x(), now_player.getPlayer_y());
 						SendObject(obcm);
 					}
 					if (e.getKeyCode() == 38) {// 포 각도 조절 위로 조절
@@ -244,10 +276,24 @@ public class MyPanel extends JPanel {
 
 				if (e.getKeyCode() == 32) {
 					if (attack == true) {
-						player_attack();
-						ChatMsg obcm = new ChatMsg(now_player.getUser_name(), "601", "next turn", now_player.getPlayer_x(),
-								now_player.getPlayer_y());
+						ChatMsg obcm = new ChatMsg(now_player.getUser_name(), "705", "attck!!",
+								now_player.getPlayer_x(), now_player.getPlayer_y());
 						SendObject(obcm);
+						Thread shooting = new Thread(new Runnable() {
+							@Override
+							public void run() {
+								synchronized (this) {
+									player_attack();//공격신호를 알리자
+									notify();// notify 즉 접근 가능 신호 보냄
+									
+								}
+							}
+
+						});
+						shooting.setDaemon(true);
+						shooting.start();
+						
+
 					}
 				}
 			}
@@ -255,7 +301,7 @@ public class MyPanel extends JPanel {
 
 	}
 
-	public void move_left() {//왼쪽으로 움직임
+	public void move_left() {// 왼쪽으로 움직임
 		// background가 이미지크기에 도달할때까지 옆으로 화면이 흐름
 		// player_x -= 2;
 
@@ -272,10 +318,10 @@ public class MyPanel extends JPanel {
 			}
 		} else if (background_x == 0)// 맵의 중앙에서 배경이 끝에 도달해 더이상 흐르지 못할때
 			now_player.moveNowPlayer_left(true);// 왼쪽으로 이동
-		
+
 	}
 
-	public void move_right() {//오른쪽으로 움직임
+	public void move_right() {// 오른쪽으로 움직임
 		if (FortressUI.SCREEN_WIDTH - image_t.getWidth(null) < background_x) {// 백그라운드 이미지 크기만큼 이동이 가능하다
 			// 만약에 백글아운드를 초과하면 else
 			// if로 넘어가 중앙에서 끝까지 이동함
@@ -294,79 +340,56 @@ public class MyPanel extends JPanel {
 			// 없을때
 			now_player.movePlayer_right(camera_x, true);// player가 화면끝까지 이동할수있도록이동
 		}
-		
+
 	}
-	public void player_attack(){//포탄쏘기
-		Thread shooting = new Thread(new Runnable() {
 
-			@Override
-			public void run() {
-				attack = false;
-				synchronized (this) {// 동기화 해야지만 wait notify처리가능;
-					moving = false;
-					playSound("src/music/shooting.wav", false);
-					bullet.shotBullet(now_player, playerList, field);
-					notify();// notify 즉 접근 가능 신호 보냄
+	public void player_attack() {// 포탄쏘기
+		attack = false;
+		moving = false;
+		playSound("src/music/shooting.wav", false);
+		bullet.shotBullet(now_player, playerList, field);
+
+	}
+
+	public void next_turn(Player next_player) {// 포탄쏘기
+		now_player.setPlayer_preX(now_player.getPlayer_x());
+	
+		now_player = next_player;
+		int result;
+		while (true) {
+			result = now_player.getPlayerLocation();
+			if (result == 0)
+				break;
+			else if (result == -2) {// 이전 플레이어 위치가 더높을때 즉 배경이 왼쪽으로 흘렀으므로 오른쪽으로 이동시키고 상대플레이어도
+									// 오른쪽으로 이동시켜야됨
+				background_x += result;
+				field_x += result;
+				for (Player player : playerList) {
+					if (player != now_player)
+						player.movePlayer_left();
 				}
-
+			} else if (result == 2) {
+				background_x += result;
+				field_x += result;
+				for (Player player : playerList) {
+					if (player != now_player)
+						player.movePlayer_right();
+				}
+			}
+			try {
+				Thread.sleep(10);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
 			}
 
-		});
-		shooting.setDaemon(true);
-		shooting.start();
-
-		new Thread(new Runnable() {
-
-			@Override
-			public void run() {
-				synchronized (shooting) {// 동기화 해야지만 wait notify처리가능;
-					try {
-						shooting.wait();// 동기화한 shooting 동기화 블럭 부분 끝났으면 실행가능;
-					} catch (InterruptedException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-					now_player.setPlayer_preX(now_player.getPlayer_x());
-					if (turn >= playerList.size())
-						turn = 0;
-					now_player = playerList.get(turn++);
-					int result;
-					while (true) {
-						result = now_player.getPlayerLocation();
-						if (result == 0)
-							break;
-						else if (result == -2) {// 이전 플레이어 위치가 더높을때 즉 배경이 왼쪽으로 흘렀으므로 오른쪽으로 이동시키고 상대플레이어도
-												// 오른쪽으로 이동시켜야됨
-							background_x += result;
-							field_x += result;
-							for (Player player : playerList) {
-								if (player != now_player)
-									player.movePlayer_left();
-							}
-						} else if (result == 2) {
-							background_x += result;
-							field_x += result;
-							for (Player player : playerList) {
-								if (player != now_player)
-									player.movePlayer_right();
-							}
-						}
-						try {
-							Thread.sleep(10);
-						} catch (InterruptedException e) {
-							e.printStackTrace();
-						}
-
-					}
-				}
-				if (playerList.size() == 1)
-					gameEnd();
-
-				
-			}
-
-		}).start();
+		}
+		if(now_player==my_player) {
+		moving = true;// 이동가능
+		attack = true;// 공격가능
+		}
 	}
+
+	
 
 	@Override
 	public void paintComponent(Graphics g) {

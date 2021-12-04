@@ -19,13 +19,18 @@ public class Player {
 	public Player(int player_num) {
 		this.player_num = player_num;
 	}
-	public void player_move(int player_num,int player_x) {
-		if(this.player_num ==player_num)
-			this.player_x = player_x;
-	}
+	
 	public String getUser_name() {
 		return user_name;
 	}
+	public int getPlayer_num() {
+		return player_num;
+	}
+
+	public void setPlayer_num(int player_num) {
+		this.player_num = player_num;
+	}
+
 	public void setUser_name(String user_name) {
 		this.user_name = user_name;
 	}

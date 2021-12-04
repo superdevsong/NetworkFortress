@@ -40,10 +40,12 @@ public class FortressServer extends JFrame {
 
 	private ServerSocket socket; // 서버소켓
 	private Socket client_socket; // accept() 에서 생성된 client 소켓
-	private Vector UserVec = new Vector(); // 연결된 사용자를 저장할 벡터
+	private Vector<UserService> UserVec = new Vector(); // 연결된 사용자를 저장할 벡터
+
 	private static final int BUF_LEN = 128; // Windows 처럼 BUF_LEN 을 정의
-	private int player_num = 0;
-	private int turn = 0;
+	private int turn = 0, turns = 0;
+	private int now_player_num = 0;
+	
 
 	/**
 	 * Launch the application.
@@ -117,6 +119,7 @@ public class FortressServer extends JFrame {
 	class AcceptServer extends Thread {
 		@SuppressWarnings("unchecked")
 		public void run() {
+			int player_num = 0;
 			while (true) { // 사용자 접속을 계속해서 받기 위해 while문
 				try {
 					AppendText("Waiting new clients ...");
@@ -125,6 +128,7 @@ public class FortressServer extends JFrame {
 					// User 당 하나씩 Thread 생성
 					UserService new_user = new UserService(client_socket, player_num++);
 					UserVec.add(new_user); // 새로운 참가자 배열에 추가
+
 					new_user.start(); // 만든 객체의 스레드 실행
 					AppendText("현재 참가자 수 " + UserVec.size());
 				} catch (IOException e) {
@@ -161,12 +165,15 @@ public class FortressServer extends JFrame {
 		private ObjectOutputStream oos;
 
 		private Socket client_socket;
-		private Vector user_vc;
+		private Vector<UserService> user_vc;
 		public String UserName = "";
 		public String UserStatus;
+		public String TeamStatus;
 		private int player_x, player_y;
 		private int user_player_num = 0;
 		private boolean ready = false;
+		private boolean attack = false;
+		
 
 		public UserService(Socket client_socket, int player_num) {
 			// TODO Auto-generated constructor stub
@@ -184,7 +191,7 @@ public class FortressServer extends JFrame {
 			} catch (Exception e) {
 				AppendText("userService error");
 			}
-			
+
 		}
 
 		public void GameJoin() {
@@ -198,19 +205,19 @@ public class FortressServer extends JFrame {
 				UserService user = (UserService) user_vc.elementAt(i);
 				if (user != this && user.UserStatus == "O") {
 					ChatMsg obcm = new ChatMsg("SERVER", "200", msg, -10, -10);
-					
+
 					user.WriteOneObject(obcm);
 				}
-				
+
 			} // 아직 user_vc에 새로 입장한 user는 포함되지 않았다.
 		}
 
 		public void RoomJoin() {
 			AppendText("새로운 참가자 " + UserName + "대기방 입장.");
-			 WriteOne("Welcome to Java Fortress\n"); 
-			 WriteOne(UserName + "님 환영합니다.\n");
-			 // 연결된 사용자에게 정상접속을 알림
-			 
+			WriteOne("Welcome to Java Fortress\n");
+			WriteOne(UserName + "님 환영합니다.\n");
+			// 연결된 사용자에게 정상접속을 알림
+
 			String msg = "[" + UserName + "]님이 입장 하였습니다.\n";
 			WriteOthers(msg); // 아직 user_vc에 새로 입장한 user는 포함되지 않았다.
 		}
@@ -239,11 +246,12 @@ public class FortressServer extends JFrame {
 					user.WriteOneObject(ob);
 			}
 		}
-		public void WriteAllGameStart(Object ob) {//전체한테 게임시작 메시지 보내는김에 
+
+		public void WriteAllGameStart(Object ob) {// 전체한테 게임시작 메시지 보내는김에
 			for (int i = 0; i < user_vc.size(); i++) {
 				try {
-					
-					sleep(1000);//이렇게 처리안하면 왠지 모르게 ois 오류가 뜸
+
+					sleep(1000);// 이렇게 처리안하면 왠지 모르게 ois 오류가 뜸
 				} catch (InterruptedException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -272,49 +280,48 @@ public class FortressServer extends JFrame {
 			}
 		}
 
-
-
 		// User들의 목록을 방송. 게임시작할때 인원을 받아서 화면에 처리하기위함
 		public void WriteListMe() {
 
 			for (int i = 0; i < user_vc.size(); i++) {
 				UserService user = (UserService) user_vc.elementAt(i);
-				if (user != this && user.UserStatus == "O") {//다른플레이어일때
-					ChatMsg obcm = new ChatMsg("user", "500",  user.UserName , user.player_x,
-							user.player_y);
-					obcm.setPlayer_num(user.user_player_num);//player_num를 통해 클라이언트에서 player를 찾을것이므로 정보가 필요함 
+				if (user != this && user.UserStatus == "O") {// 다른플레이어일때
+					ChatMsg obcm = new ChatMsg("user", "500", user.UserName, user.player_x, user.player_y);
+					obcm.setPlayer_num(user.user_player_num);// player_num를 통해 클라이언트에서 player를 찾을것이므로 정보가 필요함
 					WriteOneObject(obcm);
-				}
-				else if  (user == this ) {//자신이 맞으면 myplayer넣어야 되므로 이렇게 보냄
-					ChatMsg obcm = new ChatMsg("SERVER", "501",  UserName, player_x,player_y);
-					obcm.setPlayer_num(user_player_num);//player_num를 통해 클라이언트에서 player를 찾을것이므로 정보가 필요함 
+				} else if (user == this) {// 자신이 맞으면 myplayer넣어야 되므로 이렇게 보냄
+					ChatMsg obcm = new ChatMsg("SERVER", "501", UserName, player_x, player_y);
+					obcm.setPlayer_num(user_player_num);// player_num를 통해 클라이언트에서 player를 찾을것이므로 정보가 필요함
 					WriteOneObject(obcm);
 				}
 			}
 		}
-		public void ReadyCheck() {//준비가 되었는지 확인 다되어있으면 시작
+
+		public void ReadyCheck() {// 준비가 되었는지 확인 다되어있으면 시작
 			ready = true;
-			if(user_vc.size()==1)
+			if (user_vc.size() == 1)
 				return;
 			for (int i = 0; i < user_vc.size(); i++) {
 				UserService user = (UserService) user_vc.elementAt(i);
 				if (user != this && user.UserStatus == "O") {
-					if(user.ready==false)
+					if (user.ready == false)
 						return;
 				}
 			}
 			GameStart();
-			
+
 		}
+
 		public void GameStart() {
-			ChatMsg obcm = new ChatMsg("SERVER", "499", "GameStart"+ " : ",-10,-10);
+			ChatMsg obcm = new ChatMsg("SERVER", "499", "GameStart" + " : ", -10, -10);
 			for (int i = 0; i < user_vc.size(); i++) {
 				UserService user = (UserService) user_vc.elementAt(i);
-					user.player_x=(int)(Math.random()*450);
+				user.player_x = (int) (Math.random() * 450);
 			}
 			WriteAllGameStart(obcm);
-			
+
 		}
+
 		// Windows 처럼 message 제외한 나머지 부분은 NULL 로 만들기 위한 함수
 		public byte[] MakePacket(String msg) {
 			byte[] packet = new byte[BUF_LEN];
@@ -361,8 +368,6 @@ public class FortressServer extends JFrame {
 			}
 		}
 
-		
-
 		// 귓속말 전송
 		public void WritePrivate(String msg) {
 			try {
@@ -404,21 +409,87 @@ public class FortressServer extends JFrame {
 			}
 		}
 
-		public void isTurn(int turn) {
-			if (turn == user_player_num) {
-				ChatMsg obcm = new ChatMsg("SERVER", "600", "youtr turn", player_x, player_y);
-				WriteOneObject(obcm);
+		public void isTurn(int turn) {// 자신의 턴이 맞으면 자신에게 자신의턴이라고 아니면 다른사람 턴이라고 알림
+			if (turns > 0) {
+				if (turn == user_player_num) {
+					ChatMsg obcm = new ChatMsg("SERVER", "600", "youtr turn", player_x, player_y);
+					obcm.setPlayer_num(turn);
+					WriteOneObject(obcm);
+				} else if (turn != user_player_num) {
+					ChatMsg obcm = new ChatMsg("SERVER", "601", "other turn", player_x, player_y);
+					obcm.setPlayer_num(turn);// 플레이어가 누구의 턴인지 확인할수있게 turn정보를 보냄
+					WriteOneObject(obcm);
+				}
+			} else {
+				if (turn == user_player_num) {
+					ChatMsg obcm = new ChatMsg("SERVER", "600", "youtr turn", player_x, player_y);
+					obcm.setPlayer_num(turn);
+					WriteOneObject(obcm);
+				}
 			}
 
 		}
 
-		public void Turns() {
+		public void Turns() {// 모두 자신의 턴이 맞는지 확인
 			for (int i = 0; i < user_vc.size(); i++) {
 				UserService user = (UserService) user_vc.elementAt(i);
-
-				user.isTurn(turn);
+				user.isTurn(now_player_num);
 			}
 		}
+
+		public void isAttack() {// 공격이 다완료되었는지 확인하고 다완료되면 다음턴으로 넘김
+			for (int i = 0; i < user_vc.size(); i++) {
+				UserService user = (UserService) user_vc.elementAt(i);
+				if (user.attack == false)
+					return;
+			}
+			turn++;
+			if (user_vc.size() == turn)
+				turn = 0;
+			now_player_num = user_vc.get(turn).user_player_num;
+			Turns();
+
+		} public void TeamChange1() {//정리필요;
+            String msg = "[" + UserName + "]님은 Team1입니다.\n";
+            ChatMsg obcm = new ChatMsg(UserName, "801", "TeamChange1",-10,-10);
+            TeamStatus = "team1";
+            for (int i = 0; i < user_vc.size(); i++) {
+                UserService user = (UserService) user_vc.elementAt(i);
+            }
+            WriteAll(msg);
+            WriteAllObject(obcm);
+
+        }
+        public void TeamChange2() {
+            String msg = "[" + UserName + "]님은 Team1입니다.\n";
+            ChatMsg obcm = new ChatMsg(UserName, "802", "TeamChange2",-10,-10);
+            TeamStatus = "team2";
+            for (int i = 0; i < user_vc.size(); i++) {
+                UserService user = (UserService) user_vc.elementAt(i);
+            }
+            WriteAll(msg);
+            WriteAllObject(obcm);
+        }
+        public void TeamChange3() {
+            String msg = "[" + UserName + "]님은 Team2입니다.\n";
+            ChatMsg obcm = new ChatMsg(UserName, "803", "TeamChange3",-10,-10);
+            TeamStatus = "team2";
+            for (int i = 0; i < user_vc.size(); i++) {
+                UserService user = (UserService) user_vc.elementAt(i);
+            }
+            WriteAll(msg);
+            WriteAllObject(obcm);
+        }
+        public void TeamChange4() {
+            String msg = "[" + UserName + "]님은 Team2입니다.\n";
+            ChatMsg obcm = new ChatMsg(UserName, "804", "TeamChange4",-10,-10);
+            TeamStatus = "team2";
+            for (int i = 0; i < user_vc.size(); i++) {
+                UserService user = (UserService) user_vc.elementAt(i);
+            }
+            WriteAll(msg);
+            WriteAllObject(obcm);
+        }
 
 		public void run() {
 			while (true) { // 사용자 접속을 계속해서 받기 위해 while문
@@ -461,15 +532,14 @@ public class FortressServer extends JFrame {
 						AppendObject(cm);
 					} else
 						continue;
-					 if (cm.getCode().matches("100")) {
+					if (cm.getCode().matches("100")) {
 						UserName = cm.getId();
 						UserStatus = "O"; // Online 상태
 						RoomJoin();
-					}
-					else if (cm.getCode().matches("500")) {//플레이어 게임 입장처리
+					} else if (cm.getCode().matches("500")) {// 플레이어 게임 입장처리
 						GameJoin();
 						WriteListMe();
-						isTurn(turn);
+						isTurn(now_player_num);
 					} else if (cm.getCode().matches("200")) {
 						msg = String.format("[%s] %s", cm.getId(), cm.getData());
 						AppendText(msg); // server 화면에 출력
@@ -518,28 +588,41 @@ public class FortressServer extends JFrame {
 						break;
 					} else if (cm.getCode().matches("300")) {
 						WriteAllObject(cm);
-					} else if (cm.getCode().matches("400")) {
+					} else if (cm.getCode().matches("400")) {// 준비
 						ReadyCheck();
 					} else if (cm.getCode().matches("601")) {
-						turn++;
-						if (user_vc.size() == turn)
-							turn = 0;
-						WriteOthersObject(cm);
-						Turns();
+
 					} else if (cm.getCode().matches("700")) {
 						player_x = cm.getPlayer_x();
 						player_y = cm.getPlayer_y();
 						cm.setPlayer_num(user_player_num);
 						WriteOthersObject(cm);
 						AppendText(cm.getData());
+					} else if (cm.getCode().matches("701")) {
+
+						player_x = cm.getPlayer_x();
+						player_y = cm.getPlayer_y();
+						cm.setPlayer_num(user_player_num);
+						WriteOthersObject(cm);
+						AppendText(cm.getData());
+					} else if (cm.getCode().matches("705")) {
+						turns++;// 공격하면 종합턴이 올라감
+						attack = true;
+						WriteOthersObject(cm);
+						AppendText(cm.getData());
+					} else if (cm.getCode().matches("710")) {
+						attack = true;
+						isAttack();
+						AppendText(cm.getData());
+					} else if (cm.getCode().matches("801")) {//수정필요
+						TeamChange1();
+					} else if (cm.getCode().matches("802")) {
+						TeamChange2();
+					} else if (cm.getCode().matches("803")) {
+						TeamChange3();
+					} else if (cm.getCode().matches("804")) {
+						TeamChange4();
 					}
-					 else if (cm.getCode().matches("701")) {
-							player_x = cm.getPlayer_x();
-							player_y = cm.getPlayer_y();
-							cm.setPlayer_num(user_player_num);
-							WriteOthersObject(cm);
-							AppendText(cm.getData());
-						}
 				} catch (IOException e) {
 					AppendText("ois.readObject() error");
 					try {
