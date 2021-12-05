@@ -150,6 +150,7 @@ public class MyPanel extends JPanel {
 						break;
 					case "705": // 다른 플레잉어의 공격신호
 						System.out.println("705 is attack = " + cm.getData());
+						bullet.setPower(cm.getPower());
 						Thread shooting = new Thread(new Runnable() {
 							@Override
 							public void run() {
@@ -278,6 +279,7 @@ public class MyPanel extends JPanel {
 					if (attack == true) {
 						ChatMsg obcm = new ChatMsg(now_player.getUser_name(), "705", "attck!!",
 								now_player.getPlayer_x(), now_player.getPlayer_y());
+						obcm.setPower(bullet.getPower());
 						SendObject(obcm);
 						Thread shooting = new Thread(new Runnable() {
 							@Override
@@ -410,6 +412,7 @@ public class MyPanel extends JPanel {
 			else
 				g.drawImage(player.getImage_l(), player.getPlayer_x(), player.getPlayer_y(), null);
 			g.fillRect(player.getPlayer_x(), player.getPlayer_y() - 20, (int) (player.getPlayer_hp() / 2), 10);
+			g.fillRect(player.getPlayer_x(), player.getPlayer_y() - 40, (int) (bullet.getPower() ), 10);
 		}
 
 		if (bullet.isShot())
