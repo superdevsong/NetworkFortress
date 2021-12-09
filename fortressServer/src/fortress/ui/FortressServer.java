@@ -152,7 +152,7 @@ public class FortressServer extends JFrame {
 		textArea.append("data = " + msg.getData() + "\n");
 		textArea.setCaretPosition(textArea.getText().length());
 	}
-
+	
 	// User 당 생성되는 Thread
 	// Read One 에서 대기 -> Write All
 	class UserService extends Thread {
@@ -173,7 +173,7 @@ public class FortressServer extends JFrame {
 		private int user_player_num = 0;
 		private boolean ready = false;
 		private boolean attack = false;
-		
+		private int hp=100;//플레이어 hp
 
 		public UserService(Socket client_socket, int player_num) {
 			// TODO Auto-generated constructor stub
@@ -251,7 +251,7 @@ public class FortressServer extends JFrame {
 			for (int i = 0; i < user_vc.size(); i++) {
 				try {
 
-					sleep(1000);// 이렇게 처리안하면 왠지 모르게 ois 오류가 뜸
+					sleep(1000);// 이렇게 처리안하면R 왠지 모르게 ois 오류가 뜸
 				} catch (InterruptedException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -288,10 +288,12 @@ public class FortressServer extends JFrame {
 				if (user != this && user.UserStatus == "O") {// 다른플레이어일때
 					ChatMsg obcm = new ChatMsg("user", "500", user.UserName, user.player_x, user.player_y);
 					obcm.setPlayer_num(user.user_player_num);// player_num를 통해 클라이언트에서 player를 찾을것이므로 정보가 필요함
+					obcm.setHp(user.hp);//플레이어 hp 설정
 					WriteOneObject(obcm);
 				} else if (user == this) {// 자신이 맞으면 myplayer넣어야 되므로 이렇게 보냄
 					ChatMsg obcm = new ChatMsg("SERVER", "501", UserName, player_x, player_y);
 					obcm.setPlayer_num(user_player_num);// player_num를 통해 클라이언트에서 player를 찾을것이므로 정보가 필요함
+					obcm.setHp(user.hp);//플레이어 hp 설정
 					WriteOneObject(obcm);
 				}
 			}
@@ -438,17 +440,33 @@ public class FortressServer extends JFrame {
 		}
 
 		public void isAttack() {// 공격이 다완료되었는지 확인하고 다완료되면 다음턴으로 넘김
-			for (int i = 0; i < user_vc.size(); i++) {
-				UserService user = (UserService) user_vc.elementAt(i);
-				if (user.attack == false)
-					return;
-			}
-			turn++;
-			if (user_vc.size() == turn)
-				turn = 0;
-			now_player_num = user_vc.get(turn).user_player_num;
-			Turns();
-
+			new Thread(new Runnable() {
+				
+				public void run() {
+					int i;
+					while(true) {
+					for (i = 0; i < user_vc.size(); i++) {
+						UserService user = (UserService) user_vc.elementAt(i);
+						if (user.attack == false)
+							break;
+					}
+					if(i==user_vc.size()) {
+					for(UserService user : user_vc)
+						user.attack=false;
+					turn++;
+					if (user_vc.size() == turn)
+						turn = 0;
+					now_player_num = user_vc.get(turn).user_player_num;
+					Turns();
+					System.out.println("실행종료");
+					break;
+					
+					}
+					}
+					}
+			}).start();; 
+				
+			
 		} public void TeamChange1() {//정리필요;
             String msg = "[" + UserName + "]님은 Team1입니다.\n";
             ChatMsg obcm = new ChatMsg(UserName, "801", "TeamChange1",-10,-10);
@@ -489,6 +507,19 @@ public class FortressServer extends JFrame {
             }
             WriteAll(msg);
             WriteAllObject(obcm);
+        } 
+        public void playerHit(int player_num) {//플레이어가 맞으면 모두에게 이사실을 전함
+        	for(UserService user:user_vc) {
+        		if(user.user_player_num==player_num) {
+        			user.hp-=20;
+        			ChatMsg obcm = new ChatMsg("SERVER", "901", "hit player_num : " +user.user_player_num ,-10,-10);
+                	obcm.setHp(user.hp);
+                	obcm.setPlayer_num(user.user_player_num);
+                	WriteAllObject(obcm);
+                	break;
+        		}
+        	}
+        	
         }
 
 		public void run() {
@@ -607,12 +638,12 @@ public class FortressServer extends JFrame {
 						AppendText(cm.getData());
 					} else if (cm.getCode().matches("705")) {
 						turns++;// 공격하면 종합턴이 올라감
-						attack = true;
-						WriteOthersObject(cm);
+						WriteAllObject(cm);
+						isAttack();
+						
 						AppendText(cm.getData());
 					} else if (cm.getCode().matches("710")) {
 						attack = true;
-						isAttack();
 						AppendText(cm.getData());
 					} else if (cm.getCode().matches("801")) {//수정필요
 						TeamChange1();
@@ -622,6 +653,8 @@ public class FortressServer extends JFrame {
 						TeamChange3();
 					} else if (cm.getCode().matches("804")) {
 						TeamChange4();
+					} else if (cm.getCode().matches("900")) {//수정필요
+						playerHit(cm.getPlayer_num());
 					}
 				} catch (IOException e) {
 					AppendText("ois.readObject() error");

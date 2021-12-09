@@ -15,6 +15,7 @@ class ChatMsg implements Serializable {
 	private String data;
 	private int player_x, player_y;
 	private int player_num;
+	private int hp;
 	private double power;
 	public ImageIcon img;
 	

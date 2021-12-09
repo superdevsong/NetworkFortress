@@ -77,7 +77,7 @@ public class Bullet {
 				int player_y = now_player.getPlayer_y();
 				bullet_x = player_x;//bullet이 나올곳을 플레이어의 위치로해둠
 				bullet_y = player_y;
-				checkHit(now_player,playerList);//플레이어가 총에 맞는지 확인
+				
 				int jump_y;
 				int set;
 				int jump_x;
@@ -135,10 +135,11 @@ public class Bullet {
 				if (bullet_y > field - bullet_height) {
 					bullet_y = field - bullet_height;
 				}
-				bullet_x = player_x;
-				bullet_y = player_y;
+				
 				power = 0;
 				shot = false;
+				bullet_x =-500;
+				bullet_y = -500;
 				for(Player player :playerList) {
 					if(player.getPlayer_hp()==0)//체력이 0이되었을때 플레이어 삭제
 						removeIndex=playerList.indexOf(player);
@@ -147,39 +148,22 @@ public class Bullet {
 				playerList.remove(removeIndex);
 				
 			}
-	void checkHit(Player now_player,Vector<Player> playerList) {//bullet에 맞는지 확인
-		new Thread(new Runnable() {
-			@Override
-			public void run() {
-				boolean hit=false;
-				while(true) {
-						for(Player player :playerList) {
-							int player_x = player.getPlayer_x();
-							int player_y = player.getPlayer_y();
-						if(bullet_x<player_x+player.getImage_l().getWidth(null)+10&&
-								bullet_x>=player_x-10&&
-										bullet_y>= player_y) {
-							if(player==now_player)
-								continue;
-							player.setPlayer_hp(player.getPlayer_hp()-20);
-								hit = true;
-						}
-						}
-				try {
-					Thread.sleep(5);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
-				if(!shot||hit) {
-					if(hit)
-						shot=false;
-					break;
-				}
-				}
-				
-			}
-			
-		}).start();
-	}
+			/*
+			 * void checkHit(Player now_player,Vector<Player> playerList) {//bullet에 맞는지 확인
+			 * new Thread(new Runnable() {
+			 * 
+			 * @Override public void run() { boolean hit=false; while(true) { for(Player
+			 * player :playerList) { int player_x = player.getPlayer_x(); int player_y =
+			 * player.getPlayer_y();
+			 * if(bullet_x<player_x+player.getImage_l().getWidth(null)+10&&
+			 * bullet_x>=player_x-10&& bullet_y>= player_y) { if(player==now_player)
+			 * continue; player.setPlayer_hp(player.getPlayer_hp()-20); hit = true; } } try
+			 * { Thread.sleep(5); } catch (InterruptedException e) { e.printStackTrace(); }
+			 * if(!shot||hit) { if(hit) shot=false; break; } }
+			 * 
+			 * }
+			 * 
+			 * }).start(); }
+			 */
 	
 }

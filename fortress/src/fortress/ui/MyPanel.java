@@ -47,6 +47,7 @@ public class MyPanel extends JPanel {
 	private int field = 300 - image_t.getHeight(null);
 	private int background_x = 0, field_x = 0;
 	private Bullet bullet = new Bullet();
+	boolean shot=false;
 	boolean moving = false;
 	boolean attack = false;
 
@@ -118,7 +119,7 @@ public class MyPanel extends JPanel {
 						if (playerList.size() == 0)
 							now_player = new_player;
 						playerList.add(new_player);
-						new_player.init(field, cm.getPlayer_x());
+						new_player.init(field, cm.getPlayer_x(),cm.getHp());
 						break;
 					case "501": // chat message
 						System.out.println("501 myplayer" + cm.getData() + " player_num:" + cm.getPlayer_num());
@@ -126,7 +127,7 @@ public class MyPanel extends JPanel {
 						if (playerList.size() == 0)
 							now_player = my_player;
 						playerList.add(my_player);
-						my_player.init(field, cm.getPlayer_x());
+						my_player.init(field, cm.getPlayer_x(),cm.getHp());
 						break;
 					case "600": // chat message
 						System.out.println("600 is your turn");
@@ -150,12 +151,16 @@ public class MyPanel extends JPanel {
 						break;
 					case "705": // 다른 플레잉어의 공격신호
 						System.out.println("705 is attack = " + cm.getData());
+					
 						bullet.setPower(cm.getPower());
 						Thread shooting = new Thread(new Runnable() {
 							@Override
 							public void run() {
 								synchronized (this) {
+									shot=true;
+									checkHit();
 									player_attack();//공격신호를 알리자
+									shot=false;
 									System.out.println("내려옴");
 									notify();// notify 즉 접근 가능 신호 보냄
 									
@@ -184,6 +189,13 @@ public class MyPanel extends JPanel {
 
 							}).start();;
 						
+						break;
+					case "901":
+						System.out.println("나왔어욤?");
+						for (Player player : playerList) {
+							if (player.getPlayer_num() == cm.getPlayer_num())
+								player.setPlayer_hp(cm.getHp());
+						}
 						break;
 					/*
 					 * case "300": // Image 첨부 AppendText("[" + cm.getId() + "]");
@@ -277,23 +289,13 @@ public class MyPanel extends JPanel {
 
 				if (e.getKeyCode() == 32) {
 					if (attack == true) {
+						
 						ChatMsg obcm = new ChatMsg(now_player.getUser_name(), "705", "attck!!",
 								now_player.getPlayer_x(), now_player.getPlayer_y());
 						obcm.setPower(bullet.getPower());
 						SendObject(obcm);
-						Thread shooting = new Thread(new Runnable() {
-							@Override
-							public void run() {
-								synchronized (this) {
-									player_attack();//공격신호를 알리자
-									notify();// notify 즉 접근 가능 신호 보냄
-									
-								}
-							}
-
-						});
-						shooting.setDaemon(true);
-						shooting.start();
+						
+						
 						
 
 					}
@@ -350,6 +352,7 @@ public class MyPanel extends JPanel {
 		moving = false;
 		playSound("src/music/shooting.wav", false);
 		bullet.shotBullet(now_player, playerList, field);
+		
 
 	}
 
@@ -389,6 +392,45 @@ public class MyPanel extends JPanel {
 		moving = true;// 이동가능
 		attack = true;// 공격가능
 		}
+	}
+	void checkHit() {//bullet에 맞는지 확인
+		new Thread(new Runnable() {
+			@Override
+			public void run() {
+				boolean hit=false;
+				while(true) {
+						for(Player player :playerList) {
+							int player_x = player.getPlayer_x();
+							int player_y = player.getPlayer_y();
+						if(bullet.getBullet_x()<player_x+player.getImage_l().getWidth(null)+10&&
+								bullet.getBullet_x()>=player_x-10&&
+										bullet.getBullet_y()>= player_y) {
+							if(player==now_player)
+								continue;
+							if(player==my_player) {//모두가 보내면 요청이겹치므로
+							ChatMsg obcm = new ChatMsg(player.getUser_name(), "900", "hit", -10, -10);
+							obcm.setPlayer_num(player.getPlayer_num());//데미지입힘
+							SendObject(obcm);
+							}
+								hit = true;
+								
+						}
+						}
+				try {
+					Thread.sleep(5);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+				if(!shot||hit) {
+					if(hit)
+						bullet.setShot(false);
+					break;
+				}
+				}
+				
+			}
+			
+		}).start();
 	}
 
 	

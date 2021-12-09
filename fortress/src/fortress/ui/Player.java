@@ -1,6 +1,7 @@
 package fortress.ui;
 
 import java.awt.Image;
+import java.util.Vector;
 
 import javax.swing.ImageIcon;
 
@@ -10,12 +11,13 @@ public class Player {
 	
 	Image image_r = new ImageIcon("src/image/player/player2r_attack.gif").getImage();
 	Image image_l = new ImageIcon("src/image/player/player2_attack.gif").getImage();
+	
 	int range_x,range_y;
 	private int player_x, player_y;
 	private int player_preX;
 	private String user_name;
 	private int player_num;
-	private int player_hp = 100;
+	private int player_hp;
 	public Player(int player_num) {
 		this.player_num = player_num;
 	}
@@ -53,10 +55,11 @@ public class Player {
 		if(edge && player_x>=0)
 			player_x-=2;
 	}
-	public void init(int field, int x) {
+	public void init(int field, int x,int hp) {
 		player_y=field-image_r.getHeight(null);;
 		player_x =x; /*일단 0으로 주어짐 (int)(Math.random()*500); */
 		player_preX = player_x;
+		player_hp = hp;
 	}
 	public int getRange_x() {
 		return range_x;
@@ -122,6 +125,7 @@ public class Player {
 		}
 		
 	}
+
 	
 	
 }
