@@ -1,6 +1,7 @@
 package fortress.ui;
 
 import java.awt.Image;
+import java.nio.file.Files;
 import java.util.Vector;
 
 import javax.swing.ImageIcon;
@@ -16,11 +17,37 @@ public class Player {
 	private int player_x, player_y;
 	private int player_preX;
 	private String user_name;
+	private String UserStatus=null;
+	public Player(int player_num,String TeamStatus,String UserStatus,String UserName) {
+		this.player_num = player_num;
+		this.TeamStatus = TeamStatus;
+		this.UserStatus = UserStatus;
+		this.user_name = UserName;
+	
+	}
+	public void dead() {
+		image_r = null;
+		image_l = null;
+		UserStatus="D";
+	}
+	public String getUserStatus() {
+		return UserStatus;
+	}
+
+	public void setUserStatus(String userStatus) {
+		UserStatus = userStatus;
+	}
+	private String TeamStatus;
+	public String getTeamStatus() {
+		return TeamStatus;
+	}
+
+	public void setTeamStatus(String teamStatus) {
+		TeamStatus = teamStatus;
+	}
 	private int player_num;
 	private int player_hp;
-	public Player(int player_num) {
-		this.player_num = player_num;
-	}
+	
 	
 	public String getUser_name() {
 		return user_name;
@@ -86,7 +113,7 @@ public class Player {
 	public void setPlayer_hp(int player_hp) {
 		this.player_hp = player_hp;
 	}
-	public boolean isDirection() {
+	public boolean isDirection() {//isdiretion true right false left 
 		return direction;
 	}
 	public void setDirection(boolean direction) {

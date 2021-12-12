@@ -140,12 +140,7 @@ public class Bullet {
 				shot = false;
 				bullet_x =-500;
 				bullet_y = -500;
-				for(Player player :playerList) {
-					if(player.getPlayer_hp()==0)//체력이 0이되었을때 플레이어 삭제
-						removeIndex=playerList.indexOf(player);
-				}
-				if(playerList.get(removeIndex).getPlayer_hp()==0)
-				playerList.remove(removeIndex);
+				
 				
 			}
 			/*

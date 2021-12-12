@@ -41,10 +41,12 @@ public class FortressServer extends JFrame {
 	private ServerSocket socket; // 서버소켓
 	private Socket client_socket; // accept() 에서 생성된 client 소켓
 	private Vector<UserService> UserVec = new Vector(); // 연결된 사용자를 저장할 벡터
-
+	private Vector<UserService> UserTeam1 = new Vector(); // 연결된 사용자를 저장할 벡터
+	private Vector<UserService> UserTeam2 = new Vector(); // 연결된 사용자를 저장할 벡터
 	private static final int BUF_LEN = 128; // Windows 처럼 BUF_LEN 을 정의
 	private int turn = 0, turns = 0;
-	private int now_player_num = 0;
+	private int now_player_num = 1000;// 맨처음 들어오는 플레이어가 첫턴 플레이어임 
+	private GameService gameService = null;
 	
 
 	/**
@@ -119,9 +121,12 @@ public class FortressServer extends JFrame {
 	class AcceptServer extends Thread {
 		@SuppressWarnings("unchecked")
 		public void run() {
-			int player_num = 0;
+			
+			int player_num = 1000;
 			while (true) { // 사용자 접속을 계속해서 받기 위해 while문
 				try {
+					Integer a = 10;
+					AppendText(""+a.SIZE);
 					AppendText("Waiting new clients ...");
 					client_socket = socket.accept(); // accept가 일어나기 전까지는 무한 대기중
 					AppendText("새로운 참가자 from " + client_socket);
@@ -152,7 +157,127 @@ public class FortressServer extends JFrame {
 		textArea.append("data = " + msg.getData() + "\n");
 		textArea.setCaretPosition(textArea.getText().length());
 	}
-	
+	class GameService  {//게임의 전반적인 시스템 
+		private Vector<UserService> user_vc;
+		public GameService() {
+			this.user_vc = UserVec;
+			
+			Thread checkStart =new Thread(new Runnable() {
+
+				@Override
+				public void run() {
+					int i =0;
+					while(true) {
+						System.out.println("여기에있나요~");
+						for(i=0;i<user_vc.size();i++) {
+							if(user_vc.get(i).game_ready==false)
+								break;
+						}
+						if(i==user_vc.size()) {
+							checkHP();
+							checkGame();
+							break;
+						}
+						try {
+							Thread.sleep(50);
+						} catch (InterruptedException e) {
+							e.printStackTrace();
+						}
+						}
+					
+				}});
+			checkStart.setDaemon(true);
+			checkStart.start();
+		}
+		public void checkHP(){//플레이어들의 hp를 확인
+			Thread checkHP = new Thread(new Runnable() {
+
+				@Override
+				public void run() {
+					while(true) {
+						for(UserService user:user_vc) {
+							if(user.hp ==0 && user.UserStatus=="O") {
+								user.UserStatus="D";
+								ChatMsg obcm = new ChatMsg("SERVER", "902","player die" , -10, -10);//플레이어가 죽으면 죽은 신호를 보냄
+								obcm.setPlayer_num(user.user_player_num);
+								user.WriteAllObject(obcm);
+						}
+					}
+						try {
+							Thread.sleep(50);
+						} catch (InterruptedException e) {
+							e.printStackTrace();
+						}
+				}
+				}});
+			checkHP.setDaemon(true);
+			checkHP.start();
+			
+	}
+		public void checkGame(){//플레이어들의 hp를 확인
+			Thread checkGame = new Thread(new Runnable() {
+
+				@Override
+				public void run() {
+				
+					int i =0,t=0;
+					UserService Team1 = null;
+					UserService Team2 =null;
+				
+					while(true) {
+						for(i=0;i<UserTeam1.size();i++) {
+							Team1 = UserTeam1.elementAt(i);
+							
+							if(Team1.UserStatus.equals("O")) {//살아있다면 break;
+								break;
+							}
+						}
+						
+						for(t=0;t<UserTeam2.size();t++) {
+							Team2 = UserTeam2.elementAt(t);
+							if(Team2.UserStatus.equals("O")) {//살아있다면 break;
+								break;
+							}
+						}
+						if(i==UserTeam1.size() && t==UserTeam2.size()) {
+							ChatMsg obcm = new ChatMsg("SERVER", "1002", "Draw", -10, -10);//패배
+							Team1.WriteAllObject(obcm);
+							break;
+						}
+						else if(i==UserTeam1.size()&& t<UserTeam2.size()) {
+							ChatMsg obcm = new ChatMsg("SERVER", "1000", "Lose", -10, -10);//패배
+							for(UserService user : UserTeam1) {
+								user.WriteOneObject(obcm);
+							}
+							obcm = new ChatMsg("SERVER", "1001", "Win", -10, -10);
+							for(UserService user : UserTeam2) {
+								user.WriteOneObject(obcm);
+							}
+							break;
+						} else if(t==UserTeam2.size()&& i<UserTeam1.size()) {
+							ChatMsg obcm = new ChatMsg("SERVER", "1000", "Lose", -10, -10);//패배
+							for(UserService user : UserTeam2) {
+								user.WriteOneObject(obcm);
+							}
+							obcm = new ChatMsg("SERVER", "1001", "Win", -10, -10);
+							for(UserService user : UserTeam1) {
+								user.WriteOneObject(obcm);
+							}
+							break;
+						}
+						
+						try {
+							Thread.sleep(50);
+						} catch (InterruptedException e) {
+							e.printStackTrace();
+						}
+				}
+				}});
+			checkGame.setDaemon(true);
+			checkGame.start();
+			
+	}
+	}
 	// User 당 생성되는 Thread
 	// Read One 에서 대기 -> Write All
 	class UserService extends Thread {
@@ -170,9 +295,10 @@ public class FortressServer extends JFrame {
 		public String UserStatus;
 		public String TeamStatus;
 		private int player_x, player_y;
-		private int user_player_num = 0;
+		private int user_player_num;
 		private boolean ready = false;
 		private boolean attack = false;
+		private boolean game_ready = false;
 		private int hp=100;//플레이어 hp
 
 		public UserService(Socket client_socket, int player_num) {
@@ -200,6 +326,7 @@ public class FortressServer extends JFrame {
 			 * WriteOne("Welcome to Java chat server\n"); WriteOne(UserName + "님 환영합니다.\n");
 			 * // 연결된 사용자에게 정상접속을 알림
 			 */
+			
 			String msg = "[" + UserName + "]님이 입장 하였습니다.\n";
 			for (int i = 0; i < user_vc.size(); i++) {
 				UserService user = (UserService) user_vc.elementAt(i);
@@ -242,7 +369,6 @@ public class FortressServer extends JFrame {
 		public void WriteAllObject(Object ob) {
 			for (int i = 0; i < user_vc.size(); i++) {
 				UserService user = (UserService) user_vc.elementAt(i);
-				if (user.UserStatus == "O")
 					user.WriteOneObject(ob);
 			}
 		}
@@ -283,21 +409,23 @@ public class FortressServer extends JFrame {
 		// User들의 목록을 방송. 게임시작할때 인원을 받아서 화면에 처리하기위함
 		public void WriteListMe() {
 
-			for (int i = 0; i < user_vc.size(); i++) {
-				UserService user = (UserService) user_vc.elementAt(i);
-				if (user != this && user.UserStatus == "O") {// 다른플레이어일때
-					ChatMsg obcm = new ChatMsg("user", "500", user.UserName, user.player_x, user.player_y);
-					obcm.setPlayer_num(user.user_player_num);// player_num를 통해 클라이언트에서 player를 찾을것이므로 정보가 필요함
-					obcm.setHp(user.hp);//플레이어 hp 설정
-					WriteOneObject(obcm);
-				} else if (user == this) {// 자신이 맞으면 myplayer넣어야 되므로 이렇게 보냄
-					ChatMsg obcm = new ChatMsg("SERVER", "501", UserName, player_x, player_y);
-					obcm.setPlayer_num(user_player_num);// player_num를 통해 클라이언트에서 player를 찾을것이므로 정보가 필요함
-					obcm.setHp(user.hp);//플레이어 hp 설정
-					WriteOneObject(obcm);
-				}
-			}
-		}
+            for (int i = 0; i < user_vc.size(); i++) {
+                UserService user = (UserService) user_vc.elementAt(i);
+                if (user != this && user.UserStatus == "O") {// 다른플레이어일때
+                    ChatMsg obcm = new ChatMsg("user", "500", user.UserName, user.player_x, user.player_y);
+                    obcm.setPlayer_num(user.user_player_num);// player_num를 통해 클라이언트에서 player를 찾을것이므로 정보가 필요함
+                    obcm.setHp(user.hp);//플레이어 hp 설정
+                    obcm.setTeamStatus(user.TeamStatus);
+                    WriteOneObject(obcm);
+                } else if (user == this) {// 자신이 맞으면 myplayer넣어야 되므로 이렇게 보냄
+                    ChatMsg obcm = new ChatMsg("SERVER", "501", user.UserName, player_x, player_y);
+                    obcm.setPlayer_num(user_player_num);// player_num를 통해 클라이언트에서 player를 찾을것이므로 정보가 필요함
+                    obcm.setHp(user.hp);//플레이어 hp 설정
+                    obcm.setTeamStatus(user.TeamStatus);
+                    WriteOneObject(obcm);
+                }
+            }
+        }
 
 		public void ReadyCheck() {// 준비가 되었는지 확인 다되어있으면 시작
 			ready = true;
@@ -306,7 +434,7 @@ public class FortressServer extends JFrame {
 			for (int i = 0; i < user_vc.size(); i++) {
 				UserService user = (UserService) user_vc.elementAt(i);
 				if (user != this && user.UserStatus == "O") {
-					if (user.ready == false)
+					if (user.ready==false)
 						return;
 				}
 			}
@@ -315,6 +443,7 @@ public class FortressServer extends JFrame {
 		}
 
 		public void GameStart() {
+			gameService = new GameService();
 			ChatMsg obcm = new ChatMsg("SERVER", "499", "GameStart" + " : ", -10, -10);
 			for (int i = 0; i < user_vc.size(); i++) {
 				UserService user = (UserService) user_vc.elementAt(i);
@@ -447,27 +576,52 @@ public class FortressServer extends JFrame {
 					while(true) {
 					for (i = 0; i < user_vc.size(); i++) {
 						UserService user = (UserService) user_vc.elementAt(i);
-						if (user.attack == false)
+						if (user.attack==false)
 							break;
 					}
 					if(i==user_vc.size()) {
 					for(UserService user : user_vc)
 						user.attack=false;
-					turn++;
-					if (user_vc.size() == turn)
-						turn = 0;
-					now_player_num = user_vc.get(turn).user_player_num;
-					Turns();
-					System.out.println("실행종료");
+					try {
+						Thread.sleep(1000);
+					} catch (InterruptedException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+					while(true) {
+						System.out.println("여기옴?");
+						turn++;
+						if (user_vc.size() <= turn)//살아있는 user의 size를 검사
+							turn = 0;
+						UserService user = user_vc.get(turn);
+						if(user.UserStatus.equals("O")) {//플레이어가 살아있을때만
+							now_player_num = user.user_player_num;
+							Turns();
+							System.out.println("실행종료");
+							break;
+						}
+						else if(user.UserStatus.equals("D"))//플레이어 죽어있으면 안됨
+							continue;
+						}
 					break;
-					
 					}
 					}
 					}
 			}).start();; 
 				
 			
-		} public void TeamChange1() {//정리필요;
+		}
+		public void teamInit() {
+			if(TeamStatus.equals("team1")) {
+				UserTeam1.add(this);
+				System.out.println("누가먼저왔나");
+			}
+			if(TeamStatus.equals("team2")) {
+				UserTeam2.add(this);
+				System.out.println("누가먼저왔나");
+			}
+		}
+		public void TeamChange1() {//정리필요;
             String msg = "[" + UserName + "]님은 Team1입니다.\n";
             ChatMsg obcm = new ChatMsg(UserName, "801", "TeamChange1",-10,-10);
             TeamStatus = "team1";
@@ -481,7 +635,7 @@ public class FortressServer extends JFrame {
         public void TeamChange2() {
             String msg = "[" + UserName + "]님은 Team1입니다.\n";
             ChatMsg obcm = new ChatMsg(UserName, "802", "TeamChange2",-10,-10);
-            TeamStatus = "team2";
+            TeamStatus = "team1";
             for (int i = 0; i < user_vc.size(); i++) {
                 UserService user = (UserService) user_vc.elementAt(i);
             }
@@ -508,19 +662,24 @@ public class FortressServer extends JFrame {
             WriteAll(msg);
             WriteAllObject(obcm);
         } 
-        public void playerHit(int player_num) {//플레이어가 맞으면 모두에게 이사실을 전함
-        	for(UserService user:user_vc) {
-        		if(user.user_player_num==player_num) {
-        			user.hp-=20;
-        			ChatMsg obcm = new ChatMsg("SERVER", "901", "hit player_num : " +user.user_player_num ,-10,-10);
-                	obcm.setHp(user.hp);
-                	obcm.setPlayer_num(user.user_player_num);
-                	WriteAllObject(obcm);
-                	break;
-        		}
-        	}
-        	
+        public void playerHit(int player_num,String TeamStatus) {//플레이어가 맞으면 모두에게 이사실을 전함
+            for(UserService user:user_vc) {
+
+                if(user.user_player_num==player_num && !user.TeamStatus.equals(TeamStatus)) {
+                    System.out.println(user.TeamStatus+"fda");
+                    System.out.println(TeamStatus+"vz");
+                    user.hp-=20;
+                    ChatMsg obcm = new ChatMsg("SERVER", "901", "hit player_num : " +user.user_player_num ,-10,-10);
+                    obcm.setHp(user.hp);
+                    obcm.setPlayer_num(user.user_player_num);
+                    WriteAllObject(obcm);
+                    break;
+                }
+
+            }
+
         }
+       
 
 		public void run() {
 			while (true) { // 사용자 접속을 계속해서 받기 위해 while문
@@ -568,9 +727,12 @@ public class FortressServer extends JFrame {
 						UserStatus = "O"; // Online 상태
 						RoomJoin();
 					} else if (cm.getCode().matches("500")) {// 플레이어 게임 입장처리
+						teamInit();
 						GameJoin();
 						WriteListMe();
 						isTurn(now_player_num);
+						System.out.println("이제 여기왔어요");
+						game_ready=true;
 					} else if (cm.getCode().matches("200")) {
 						msg = String.format("[%s] %s", cm.getId(), cm.getData());
 						AppendText(msg); // server 화면에 출력
@@ -654,7 +816,7 @@ public class FortressServer extends JFrame {
 					} else if (cm.getCode().matches("804")) {
 						TeamChange4();
 					} else if (cm.getCode().matches("900")) {//수정필요
-						playerHit(cm.getPlayer_num());
+						playerHit(cm.getPlayer_num(),cm.getTeamStatus());
 					}
 				} catch (IOException e) {
 					AppendText("ois.readObject() error");
