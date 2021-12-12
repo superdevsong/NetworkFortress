@@ -176,6 +176,7 @@ public class FortressServer extends JFrame {
 						if(i==user_vc.size()) {
 							checkHP();
 							checkGame();
+							gameStart();
 							break;
 						}
 						try {
@@ -200,6 +201,7 @@ public class FortressServer extends JFrame {
 								user.UserStatus="D";
 								ChatMsg obcm = new ChatMsg("SERVER", "902","player die" , -10, -10);//플레이어가 죽으면 죽은 신호를 보냄
 								obcm.setPlayer_num(user.user_player_num);
+								obcm.setUserStatus(user.UserStatus);//플레이어가죽으면 죽었따는 표시
 								user.WriteAllObject(obcm);
 						}
 					}
@@ -277,6 +279,15 @@ public class FortressServer extends JFrame {
 			checkGame.start();
 			
 	}
+		public void gameStart(){//게임시작을 알림
+			ChatMsg obcm = new ChatMsg("SERVER", "502", "Start", -10, -10);//게임 시작하라고 알림
+			now_player_num = user_vc.get(0).user_player_num;//첫번째 놈을 항상 먼저 보냄
+			for(UserService user : user_vc) {
+				user.isTurn(now_player_num);
+				user.WriteOneObject(obcm);
+			}
+			
+		}
 	}
 	// User 당 생성되는 Thread
 	// Read One 에서 대기 -> Write All
@@ -416,12 +427,14 @@ public class FortressServer extends JFrame {
                     obcm.setPlayer_num(user.user_player_num);// player_num를 통해 클라이언트에서 player를 찾을것이므로 정보가 필요함
                     obcm.setHp(user.hp);//플레이어 hp 설정
                     obcm.setTeamStatus(user.TeamStatus);
+                    obcm.setUserStatus(UserStatus);
                     WriteOneObject(obcm);
                 } else if (user == this) {// 자신이 맞으면 myplayer넣어야 되므로 이렇게 보냄
                     ChatMsg obcm = new ChatMsg("SERVER", "501", user.UserName, player_x, player_y);
                     obcm.setPlayer_num(user_player_num);// player_num를 통해 클라이언트에서 player를 찾을것이므로 정보가 필요함
                     obcm.setHp(user.hp);//플레이어 hp 설정
                     obcm.setTeamStatus(user.TeamStatus);
+                    obcm.setUserStatus(UserStatus);
                     WriteOneObject(obcm);
                 }
             }
@@ -730,7 +743,6 @@ public class FortressServer extends JFrame {
 						teamInit();
 						GameJoin();
 						WriteListMe();
-						isTurn(now_player_num);
 						System.out.println("이제 여기왔어요");
 						game_ready=true;
 					} else if (cm.getCode().matches("200")) {
@@ -804,7 +816,12 @@ public class FortressServer extends JFrame {
 						isAttack();
 						
 						AppendText(cm.getData());
-					} else if (cm.getCode().matches("710")) {
+					}else if (cm.getCode().matches("706")) {
+                        turns++;// 공격하면 종합턴이 올라감
+                        WriteAllObject(cm);
+                        isAttack();
+                        AppendText(cm.getData());
+                    } else if (cm.getCode().matches("710")) {
 						attack = true;
 						AppendText(cm.getData());
 					} else if (cm.getCode().matches("801")) {//수정필요

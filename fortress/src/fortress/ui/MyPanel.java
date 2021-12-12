@@ -5,6 +5,8 @@ import java.awt.Color;
 import java.awt.EventQueue;
 import java.awt.Graphics;
 import java.awt.Image;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
@@ -26,6 +28,7 @@ import javax.sound.sampled.FloatControl;
 import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.UnsupportedAudioFileException;
 import javax.swing.ImageIcon;
+import javax.swing.JButton;
 import javax.swing.JPanel;
 
 /*코드 전체적인 리펙토링 필요
@@ -33,7 +36,8 @@ import javax.swing.JPanel;
  * 이중 버퍼링이라던가 변수 하나로 선언해서 묶는다던가
  * */
 public class MyPanel extends JPanel {
-
+	private Font f = new Font("Arial", Font.BOLD, 30);
+	private Font hp = new Font("Arial",Font.BOLD, 12);
 	private ObjectInputStream ois;
 	private ObjectOutputStream oos;
 	private Socket socket; // 연결소켓
@@ -51,7 +55,10 @@ public class MyPanel extends JPanel {
 	boolean shot = false;
 	boolean moving = false;
 	boolean attack = false;
+	boolean start = false;
+	boolean game_over = false;
 	String result = null;
+	JButton  exit;
 
 	private void gameEnd() {
 
@@ -133,6 +140,10 @@ public class MyPanel extends JPanel {
 						playerList.add(my_player);
 						my_player.init(field, cm.getPlayer_x(), cm.getHp());
 						break;
+					case "502": // chat message
+						System.out.println("게임시작했어!!!!");
+						start = true;
+						break;
 					case "600": // chat message
 						System.out.println("600 is your turn");
 						next_turn(my_player);
@@ -196,6 +207,53 @@ public class MyPanel extends JPanel {
 						;
 
 						break;
+					case "706": // 다른 플레잉어의 공격신호
+                        System.out.println("706 is skill attack = " + cm.getData());
+                        bullet.setPower(cm.getPower());
+                        bullet.setVeloY(cm.getVeloY());
+                        Thread skill_shooting = new Thread(new Runnable() {
+                            @Override
+                            public void run() {
+                                synchronized (this) {
+                                    shot = true;
+                                    checkHit();
+                                    player_attack();// 공격신호를 알리자
+                                    bullet.setPower(cm.getPower());
+                                    bullet.setVeloY(cm.getVeloY());
+                                    player_attack();
+                                    shot = false;
+                                    System.out.println("내려옴");
+                                    notify();// notify 즉 접근 가능 신호 보냄
+
+                                }
+                            }
+
+                        });
+                        skill_shooting.setDaemon(true);
+                        skill_shooting.start();
+                      
+                        new Thread(new Runnable() {
+                            @Override
+                            public void run() {
+                                synchronized (skill_shooting) {
+                                    try {
+                                        skill_shooting.wait();
+                                    } catch (InterruptedException e) {
+                                        // TODO Auto-generated catch block
+                                        e.printStackTrace();
+                                    }
+
+                                    ChatMsg obcm1 = new ChatMsg(now_player.getUser_name(), "710", "attack complete",
+                                            -10, -10);
+                                    SendObject(obcm1);
+                                    bullet.setVeloY(1.0);
+                                }
+                            }
+
+                        }).start();
+                        ;
+
+                        break;
 					case "901":
 						for (Player player : playerList) {
 							if (player.getPlayer_num() == cm.getPlayer_num())
@@ -206,18 +264,51 @@ public class MyPanel extends JPanel {
 						for (Player player : playerList) {
 							if (player.getPlayer_num() == cm.getPlayer_num()) {
 								playerList.remove(player);
+								player.dead();
 								break;
 							}
 
 						}
 						break;
 					case "1000":
+						game_over=true;
 						System.out.println("왔어왔어 내가왔어");
-						result = "Lose";
+						result = cm.getData();
+						exit=new JButton("게임 종료");
+		                exit.addActionListener(new ActionListener() {
+
+							@Override
+							public void actionPerformed(ActionEvent e) {
+								ChatMsg msg = new ChatMsg(null, "201", "Bye", -10, -10);
+		                        SendObject(msg);
+		                        System.exit(0);
+								
+							}
+		                    
+		                });
+		                exit.setBounds(700,460,200,60);
+		                add(exit);
 						break;
 					case "1001":
-						result = "Win";
+						game_over=true;
+						result = cm.getData();
 						System.out.println("왔어왔어 내가왔어");
+						exit=new JButton("게임 종료");
+		                exit.addActionListener(new ActionListener() {
+
+							@Override
+							public void actionPerformed(ActionEvent e) {
+								ChatMsg msg = new ChatMsg(null, "201", "Bye", -10, -10);
+		                        SendObject(msg);
+		                        System.exit(0);
+								
+							}
+		                    
+		                });
+		                exit.setBounds(700,460,200,60);
+		                add(exit);
+
+		            
 						break;
 
 					}
@@ -246,32 +337,16 @@ public class MyPanel extends JPanel {
 		// 로그인 사실을 알림와 동시에 초기 위치 알림
 		SendObject(obcm);
 		ListenNetwork net = new ListenNetwork();
+		net.setDaemon(true);
 		net.start();
 
 		playSound("src/music/music.wav", true);
-		Thread nt = new Thread(new Runnable() {
-
-			@Override
-			public void run() {
-				while (true) {
-					repaint();
-					try {
-						Thread.sleep(10);
-					} catch (InterruptedException e) {
-						e.printStackTrace();
-					}
-				}
-
-			}
-
-		});
-		nt.setDaemon(true);// main종료할때 같이 종료
-		nt.start();
+		
 
 		addKeyListener(new KeyAdapter() {
 			@Override
 			public void keyPressed(KeyEvent e) {
-				if (moving) {
+				if (moving && start &&!game_over) {
 
 					System.out.println(e.getKeyCode());
 					if (e.getKeyCode() == 37) {
@@ -299,6 +374,11 @@ public class MyPanel extends JPanel {
 							bullet.setPower(bullet.getPower() + 1.0);
 
 					}
+					if(e.getKeyCode() == KeyEvent.VK_K) {
+                        if (bullet.getPower() < 30.0)
+                            bullet.setPower(bullet.getPower() + 1.0);
+
+                    }
 				}
 
 			}
@@ -307,7 +387,7 @@ public class MyPanel extends JPanel {
 			public void keyReleased(KeyEvent e) {
 
 				if (e.getKeyCode() == 32) {
-					if (attack == true) {
+					if (attack == true && start &&!game_over) {
 
 						ChatMsg obcm = new ChatMsg(now_player.getUser_name(), "705", "attck!!",
 								now_player.getPlayer_x(), now_player.getPlayer_y());
@@ -316,10 +396,38 @@ public class MyPanel extends JPanel {
 						SendObject(obcm);
 
 					}
-				}
+				} if (e.getKeyCode() == KeyEvent.VK_K) {
+                    if (attack == true) {
+
+                        ChatMsg obcm = new ChatMsg(now_player.getUser_name(), "706", "skill attck!!",
+                                now_player.getPlayer_x(), now_player.getPlayer_y());
+                        obcm.setPower(bullet.getPower());
+                        obcm.setVeloY(bullet.getVeloY());
+                        SendObject(obcm);
+
+                    }
+                }
 			}
 		});
+		Thread nt = new Thread(new Runnable() {
 
+			@Override
+			public void run() {
+				while (true) {
+					if(start)
+					repaint();
+					try {
+						Thread.sleep(10);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+				}
+
+			}
+
+		});
+		nt.setDaemon(true);// main종료할때 같이 종료
+		nt.start();
 	}
 
 	public void move_left() {// 왼쪽으로 움직임
@@ -452,18 +560,14 @@ public class MyPanel extends JPanel {
 
 	@Override
 	public void paintComponent(Graphics g) {
-		Font f = new Font("Arial", Font.BOLD, 30);
-		try {
-			BufferedImage bi = ImageIO.read(new File("src/fortress/ui/missile.jpg"));
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		
 
 		g.drawImage(image, background_x, 0, image.getWidth(null), image.getHeight(null), null);
 		g.drawImage(image_t, field_x, field, null);
-		for (Player player : playerList) {
+		if(start) {
 			
+		for (Player player : playerList) {
+			if(player.getUserStatus().equals("O")) {
 
 				if (player.isDirection())
 					g.drawImage(player.getImage_r(), player.getPlayer_x(), player.getPlayer_y(), null);
@@ -471,14 +575,22 @@ public class MyPanel extends JPanel {
 					g.drawImage(player.getImage_l(), player.getPlayer_x(), player.getPlayer_y(), null);
 				}
 				g.setColor(Color.GREEN);
-				g.fillRect(player.getPlayer_x(), player.getPlayer_y() - 20, (int) (player.getPlayer_hp() / 2), 10);
-				g.fillRect(now_player.getPlayer_x(), now_player.getPlayer_y() - 40, (int) (bullet.getPower()), 10);
+                g.fillRect(player.getPlayer_x(), player.getPlayer_y() - 20, (int) (player.getPlayer_hp() / 2), 10);
+                g.fillRect(now_player.getPlayer_x(), now_player.getPlayer_y() - 40, (int) (bullet.getPower()), 10);
+                g.setColor(Color.RED);
+                g.setFont(hp);
+                g.drawString("HP", player.getPlayer_x() -15 , player.getPlayer_y() - 10);
 				{
-					g.setColor(Color.BLUE);
+					if(player.getTeamStatus().equals("team1"))
+						g.setColor(Color.BLUE);
+					else if(player.getTeamStatus().equals("team2"))
+						g.setColor(Color.PINK);
 					g.setFont(f);
 					g.drawString(player.getUser_name(), player.getPlayer_x() + 5, player.getPlayer_y() + 80);
 				}
 			
+		}
+		}
 		}
 		
 		if (result != null) {
@@ -486,7 +598,7 @@ public class MyPanel extends JPanel {
 			g.setFont(new Font("궁서", Font.BOLD, 100));
 			g.drawString("GAME OVER", 180, 100);
 			g.setFont(new Font("궁서", Font.BOLD, 60));
-			g.drawString(my_player.getTeamStatus() + " "+ result, 320, 180);
+			g.drawString(my_player.getTeamStatus() + " "+my_player.getUser_name() +" " +result, 320, 180);
 		}
 
 		if (bullet.isShot())
