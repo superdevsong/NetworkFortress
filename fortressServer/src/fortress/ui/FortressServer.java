@@ -545,7 +545,6 @@ public class FortressServer extends JFrame {
 		public void WriteOthersObject(Object ob) {
 			for (int i = 0; i < user_vc.size(); i++) {
 				UserService user = (UserService) user_vc.elementAt(i);
-				if (user != this && user.UserStatus == "O")
 					user.WriteOneObject(ob);
 			}
 		}
@@ -606,31 +605,13 @@ public class FortressServer extends JFrame {
 
 		}
 
-		// Windows 처럼 message 제외한 나머지 부분은 NULL 로 만들기 위한 함수
-		public byte[] MakePacket(String msg) {
-			byte[] packet = new byte[BUF_LEN];
-			byte[] bb = null;
-			int i;
-			for (i = 0; i < BUF_LEN; i++)
-				packet[i] = 0;
-			try {
-				bb = msg.getBytes("euc-kr");
-			} catch (UnsupportedEncodingException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			for (i = 0; i < bb.length; i++)
-				packet[i] = bb[i];
-			return packet;
-		}
+	
+		
 
 		// UserService Thread가 담당하는 Client 에게 1:1 전송
 		public void WriteOne(String msg) {
 			try {
-				// dos.writeUTF(msg);
-//				byte[] bb;
-//				bb = MakePacket(msg);
-//				dos.write(bb, 0, bb.length);
+				
 				ChatMsg obcm = new ChatMsg("SERVER", CHATTING_PROTOCOL, msg, player_x, player_y);
 				oos.writeObject(obcm);
 			} catch (IOException e) {
@@ -652,26 +633,7 @@ public class FortressServer extends JFrame {
 			}
 		}
 
-		// 귓속말 전송
-		public void WritePrivate(String msg) {
-			try {
-				ChatMsg obcm = new ChatMsg("귓속말", CHATTING_PROTOCOL, msg, player_x, player_y);
-				oos.writeObject(obcm);
-			} catch (IOException e) {
-				AppendText("dos.writeObject() error");
-				try {
-					oos.close();
-					client_socket.close();
-					client_socket = null;
-					ois = null;
-					oos = null;
-				} catch (IOException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				}
-				Logout(); // 에러가난 현재 객체를 벡터에서 지운다
-			}
-		}
+		
 
 		public void WriteOneObject(Object ob) {
 			try {
@@ -694,14 +656,7 @@ public class FortressServer extends JFrame {
 		}
 
 		public void isTurn(int turn) {// 자신의 턴이 맞으면 자신에게 자신의턴이라고 아니면 다른사람 턴이라고 알림
-			/*
-			 * if (turns > 0) { if (turn == user_player_num) { ChatMsg obcm = new
-			 * ChatMsg("SERVER", YOURTURN_PROTOCOL, "youtr turn", player_x, player_y);
-			 * obcm.setPlayer_num(turn); WriteOneObject(obcm); } else if (turn !=
-			 * user_player_num) { ChatMsg obcm = new ChatMsg("SERVER", OTHERTURN_PROTOCOL,
-			 * "other turn", player_x, player_y); obcm.setPlayer_num(turn);// 플레이어가 누구의 턴인지
-			 * 확인할수있게 turn정보를 보냄 WriteOneObject(obcm); } }
-			 */
+			
 			if (turn == user_player_num) {
 				ChatMsg obcm = new ChatMsg("SERVER", YOURTURN_PROTOCOL, "youtr turn", player_x, player_y);
 				obcm.setPlayer_num(turn);

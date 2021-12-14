@@ -115,6 +115,7 @@ public class MyPanel extends JPanel {
 	int skillDouble = 0;
 	int skillPower = 0;
 	int skillHeal = 0;
+	boolean skillGet = false;
 	boolean powerOn = false;// 파워샷여부 여부에따라 크기가달라짐
 
 	public boolean isPowerOn() {
@@ -181,7 +182,7 @@ public class MyPanel extends JPanel {
 			AudioInputStream audioStream = AudioSystem.getAudioInputStream(audioFile);
 			sound.open(audioStream);
 			FloatControl gainControl = (FloatControl) sound.getControl(FloatControl.Type.MASTER_GAIN);
-			gainControl.setValue(-10.0f);
+			gainControl.setValue(-40.0f);
 			sound.start();
 			if (isLoop)
 				sound.loop(Clip.LOOP_CONTINUOUSLY);
@@ -272,6 +273,7 @@ public class MyPanel extends JPanel {
 						System.out.println("600 is your turn");
 						next_turn(my_player);
 						mySkill();
+						skillGet=true;
 
 						break;
 					case OTHERTURN_PROTOCOL: // 다음턴
@@ -280,6 +282,7 @@ public class MyPanel extends JPanel {
 							if (player.getPlayer_num() == cm.getPlayer_num())
 								next_turn(player);
 						}
+						skillGet=true;
 						break;
 					case PLAYERMOVERIGHT_PROTOCOL: // 다른 플레잉어의 이동신호 오른쪽
 						System.out.println("700 is going = " + cm.getData());
@@ -553,7 +556,7 @@ public class MyPanel extends JPanel {
 
 				if (e.getKeyCode() == 32) {
 					if (attack && start && !game_over) {
-
+						skillGet=false;
 						AttackObject obcm = new AttackObject(PLAYERATTACK_PROTOCOL, bullet.getVeloY(),
 								bullet.getPower());
 						SendObject(obcm);
@@ -563,6 +566,7 @@ public class MyPanel extends JPanel {
 				if (e.getKeyCode() == KeyEvent.VK_Q) {
 
 					if (attack == true && skillDouble > 0) {
+						skillGet=false;
 						skillDouble -= 1;
 						AttackObject obcm = new AttackObject(DOUBLEATTACK_PROTOCOL, bullet.getVeloY(),
 								bullet.getPower());
@@ -573,6 +577,7 @@ public class MyPanel extends JPanel {
 				if (e.getKeyCode() == KeyEvent.VK_W) {
 
 					if (attack == true && skillPower > 0) {
+						skillGet=false;
 						skillPower -= 1;
 						AttackObject obcm = new AttackObject(POWERATTACK_PROTOCOL, bullet.getVeloY(),
 								bullet.getPower());
@@ -609,23 +614,23 @@ public class MyPanel extends JPanel {
 				boolean get = false;
 				int index = 0;
 				while (true) {
-					if (start) {
+					if (start&&skillGet) {
 						for (Item item : item_vc) {// 아이템추가
-							for (Player player : playerList) {
-								int player_x = player.getPlayer_x();
-								if (player_x <= item.getItemX() + 20 && player.getPlayer_x()
-										+ player.getImage_l().getWidth(null) >= item.getItemX()) {// 아이템의 x크기+20보다작고 x보다
+							
+								int player_x = now_player.getPlayer_x();
+								if (player_x <= item.getItemX() + 20 && now_player.getPlayer_x()
+										+ now_player.getImage_l().getWidth(null) >= item.getItemX()) {// 아이템의 x크기+20보다작고 x보다
 																									// 커야됨
-									player.newItem(item);
-									System.out.println("돌아가뇽?");
+									now_player.newItem(item);
 									get = true;
 									break;
 								}
 
-							}
+							
 							
 							if (get) {
 								index = item_vc.indexOf(item);
+								System.out.println("맞아????"+index);
 								break;
 							}
 							index++;
@@ -740,13 +745,14 @@ public class MyPanel extends JPanel {
 			} else if (result == 2) {
 				background_x += result;
 				field_x += result;
-				for (Item item : item_vc) {
-					item.setItemX(item.getItemX() + result);
-					System.out.println("현재 위치는" + item.getItemX());
-				}
+				
 				for (Player player : playerList) {
 					if (player != now_player)
 						player.movePlayer_right();
+				}
+				for (Item item : item_vc) {
+					item.setItemX(item.getItemX() + result);
+					System.out.println("현재 위치는" + item.getItemX());
 				}
 			} else
 				break;
@@ -764,6 +770,8 @@ public class MyPanel extends JPanel {
 			attack = true;// 공격가능
 		}
 		turn++;
+		
+		
 	}
 
 	void checkHit() {// bullet에 맞는지 확인
