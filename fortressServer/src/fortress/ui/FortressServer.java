@@ -545,6 +545,7 @@ public class FortressServer extends JFrame {
 		public void WriteOthersObject(Object ob) {
 			for (int i = 0; i < user_vc.size(); i++) {
 				UserService user = (UserService) user_vc.elementAt(i);
+				if (user != this )
 					user.WriteOneObject(ob);
 			}
 		}
