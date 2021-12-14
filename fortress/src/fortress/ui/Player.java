@@ -12,12 +12,14 @@ public class Player {
 	
 	Image image_r = new ImageIcon("src/image/player/player2r_attack.gif").getImage();
 	Image image_l = new ImageIcon("src/image/player/player2_attack.gif").getImage();
-	
+	MyPanel myPanel;
 	int range_x,range_y;
 	private int player_x, player_y;
 	private int player_preX;
+	private int moveGauge = 0;
 	private String user_name;
-	private String UserStatus=null;
+	private String UserStatus;
+	
 	public Player(int player_num,String TeamStatus,String UserStatus,String UserName) {
 		this.player_num = player_num;
 		this.TeamStatus = TeamStatus;
@@ -25,6 +27,11 @@ public class Player {
 		this.user_name = UserName;
 	
 	}
+	
+	public void setMyPanel(MyPanel myPanel) {
+		this.myPanel = myPanel;
+	}
+
 	public void dead() {
 		image_r = null;
 		image_l = null;
@@ -76,11 +83,16 @@ public class Player {
 		player_x+=2;
 	}
 	public void moveNowPlayer_left(boolean edge) {
+		if(moveGauge>0) {
+			moveGauge -=1;
 		direction=false;
 		if(player_x>=500)
 		player_x-=2;
 		if(edge && player_x>=0)
 			player_x-=2;
+		}
+		else
+			myPanel.setMoving(false);//무빙금지
 	}
 	public void init(int field, int x,int hp) {
 		player_y=field-image_r.getHeight(null);;
@@ -101,11 +113,21 @@ public class Player {
 		this.range_y = range_y;
 	}
 	public void movePlayer_right(int camera_x,boolean edge) {
+		if(moveGauge>0) {
+			moveGauge -=1;
 		direction=true;
 		if(player_x< camera_x-image_r.getWidth(null))
 		player_x+=2;
 		if(edge&&player_x< FortressUI.SCREEN_WIDTH-image_r.getWidth(null))//오른쪽으로 어느정도 왔을때 끝까지 이동할수있게 설정
 			player_x+=2;
+		}else
+			myPanel.setMoving(false);//무빙금지
+	}
+	public int getMoveGauge() {
+		return moveGauge;
+	}
+	public void setMoveGauge(int moveGauge) {
+		this.moveGauge = moveGauge;
 	}
 	public int getPlayer_hp() {
 		return player_hp;

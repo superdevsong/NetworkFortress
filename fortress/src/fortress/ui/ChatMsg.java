@@ -18,9 +18,6 @@ class ChatMsg implements Serializable {
 	private int hp;
 	private String TeamStatus;
 	private String UserStatus;
-	private double veloY;
-	private double power;
-	public ImageIcon img;
 	
 	public ChatMsg(String id, String code, String msg,int player_x,int player_y) {
 		this.id = id;

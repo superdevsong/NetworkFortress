@@ -36,29 +36,54 @@ import javax.swing.JPanel;
  * 이중 버퍼링이라던가 변수 하나로 선언해서 묶는다던가
  * */
 public class MyPanel extends JPanel {
+	public static final int SCREEN_WIDTH = 960;
+	public static final int SCREEN_HEIGHT = 640;
+	Image image = new ImageIcon("src/fortress/ui/forest.jpg").getImage();// 배경
+	Image image_tree = new ImageIcon("src/fortress/ui/tree_1.jpg").getImage();// 맵의 다리
+	Image image_turn = new ImageIcon("src/fortress/ui/triangle.png").getImage();// nowplayer 화살표
+
+	public final int SCREEN_EDGE = FortressUI.SCREEN_WIDTH - image_tree.getWidth(null);
 	private Font f = new Font("Arial", Font.BOLD, 30);
-	private Font hp = new Font("Arial",Font.BOLD, 12);
+	private Font hp = new Font("Arial", Font.BOLD, 12);
+	private MyPanel myPanel = this;// 자가자신을 갖음
 	private ObjectInputStream ois;
 	private ObjectOutputStream oos;
 	private Socket socket; // 연결소켓
-	Image image = new ImageIcon("src/fortress/ui/forest.jpg").getImage();
-	Image image_t = new ImageIcon("src/fortress/ui/tree_1.jpg").getImage();
+
 	Vector<Player> playerList = new Vector<Player>();
 	Player my_player;
 	Player now_player;
 	Player new_player;
 	int turn = 0, camera_x = 500;
 	int camera_scale = 0;
-	private int field = 300 - image_t.getHeight(null);
+	private int field = 300 - image_tree.getHeight(null);
 	private int background_x = 0, field_x = 0;
 	private Bullet bullet = new Bullet();
-	boolean shot = false;
-	boolean moving = false;
-	boolean attack = false;
-	boolean start = false;
-	boolean game_over = false;
+
+	private boolean shot = false;
+	private boolean moving = false;
+	private boolean attack = false;
+
+	public boolean isMoving() {
+		return moving;
+	}
+
+	public void setMoving(boolean moving) {
+		this.moving = moving;
+	}
+
+	public boolean isAttack() {
+		return attack;
+	}
+
+	public void setAttack(boolean attack) {
+		this.attack = attack;
+	}
+
+	private boolean start = false;
+	private boolean game_over = false;
 	String result = null;
-	JButton  exit;
+	JButton exit;
 
 	private void gameEnd() {
 
@@ -95,13 +120,16 @@ public class MyPanel extends JPanel {
 	}
 
 	class ListenNetwork extends Thread {
+		ChatMsg cm = null;
+		AttackObject ao = null;
+
 		public void run() {
 			while (true) {
 				try {
 
 					Object obcm = null;
 					String msg = null;
-					ChatMsg cm;
+					String code = null;
 					try {
 						obcm = ois.readObject();
 					} catch (ClassNotFoundException e) {
@@ -114,9 +142,13 @@ public class MyPanel extends JPanel {
 					if (obcm instanceof ChatMsg) {
 						cm = (ChatMsg) obcm;
 						msg = String.format("[%s] %s", cm.getId(), cm.getData());
+						code = cm.getCode();
+					} else if (obcm instanceof AttackObject) {
+						ao = (AttackObject) obcm;
+						code = ao.getCode();
 					} else
 						continue;
-					switch (cm.getCode()) {
+					switch (code) {
 					case "200": // chat message
 
 						System.out.println("200" + cm.getData());
@@ -126,19 +158,27 @@ public class MyPanel extends JPanel {
 						System.out.println("500" + cm.getData() + " player_num:" + cm.getPlayer_num());
 						new_player = new Player(cm.getPlayer_num(), cm.getTeamStatus(), cm.getUserStatus(),
 								cm.getData());
+						new_player.setMyPanel(myPanel);
 						if (playerList.size() == 0)
 							now_player = new_player;
 						playerList.add(new_player);
 						new_player.init(field, cm.getPlayer_x(), cm.getHp());
+						if (cm.getPlayer_x() > 500)
+							new_player.setPlayer_preX(500);
+						System.out.println("요로로로로!!!!" + cm.getPlayer_x());
 						break;
 					case "501": // chat message
 						System.out.println("501 myplayer" + cm.getData() + " player_num:" + cm.getPlayer_num());
 						my_player = new Player(cm.getPlayer_num(), cm.getTeamStatus(), cm.getUserStatus(),
 								cm.getData());
+						my_player.setMyPanel(myPanel);
 						if (playerList.size() == 0)
 							now_player = my_player;
 						playerList.add(my_player);
 						my_player.init(field, cm.getPlayer_x(), cm.getHp());
+						if (cm.getPlayer_x() > 500)
+							my_player.setPlayer_preX(500);
+						System.out.println("요로로로로!!!!" + cm.getPlayer_x());
 						break;
 					case "502": // chat message
 						System.out.println("게임시작했어!!!!");
@@ -150,7 +190,7 @@ public class MyPanel extends JPanel {
 
 						break;
 					case "601": // 다음턴
-						System.out.println("601 is next  turn");
+						System.out.println("601 is other  turn");
 						for (Player player : playerList) {
 							if (player.getPlayer_num() == cm.getPlayer_num())
 								next_turn(player);
@@ -159,15 +199,19 @@ public class MyPanel extends JPanel {
 					case "700": // 다른 플레잉어의 이동신호 오른쪽
 						System.out.println("700 is going = " + cm.getData());
 						move_right();
+						if (now_player.getPlayer_x() != cm.getPlayer_x())
+							now_player.setPlayer_x(cm.getPlayer_x());// 만약 자신의 x와 다르면 두개를 맞춤
 						break;
 					case "701": // 다른 플레잉어의 이동신호 왼쪽
 						System.out.println("701 is going = " + cm.getData());
 						move_left();
+						if (now_player.getPlayer_x() != cm.getPlayer_x())// 만약자신의 x와 다르면 두개를 맞춤
+							now_player.setPlayer_x(cm.getPlayer_x());
 						break;
 					case "705": // 다른 플레잉어의 공격신호
 						System.out.println("705 is attack = " + cm.getData());
-						bullet.setPower(cm.getPower());
-						bullet.setVeloY(cm.getVeloY());
+						bullet.setPower(ao.getPower());
+						bullet.setVeloY(ao.getVeloY());
 						Thread shooting = new Thread(new Runnable() {
 							@Override
 							public void run() {
@@ -196,6 +240,52 @@ public class MyPanel extends JPanel {
 										e.printStackTrace();
 									}
 
+									AttackObject obcm1 = new AttackObject("710", 0, 0);
+									SendObject(obcm1);
+									bullet.setVeloY(1.0);
+								}
+							}
+
+						}).start();
+						;
+
+						break;
+					case "706": // 다른 플레잉어의 공격신호 AttackObject를 사용한다.
+						System.out.println("706 is skill attack = " + cm.getData());
+						bullet.setPower(ao.getPower());
+						bullet.setVeloY(ao.getVeloY());
+						Thread skill_shooting = new Thread(new Runnable() {
+							@Override
+							public void run() {
+								synchronized (this) {
+									shot = true;
+									checkHit();
+									player_attack();// 공격신호를 알리자
+									bullet.setPower(ao.getPower());
+									bullet.setVeloY(ao.getVeloY());
+									player_attack();
+									shot = false;
+									System.out.println("내려옴");
+									notify();// notify 즉 접근 가능 신호 보냄
+
+								}
+							}
+
+						});
+						skill_shooting.setDaemon(true);
+						skill_shooting.start();
+
+						new Thread(new Runnable() {
+							@Override
+							public void run() {
+								synchronized (skill_shooting) {
+									try {
+										skill_shooting.wait();
+									} catch (InterruptedException e) {
+										// TODO Auto-generated catch block
+										e.printStackTrace();
+									}
+
 									ChatMsg obcm1 = new ChatMsg(now_player.getUser_name(), "710", "attack complete",
 											-10, -10);
 									SendObject(obcm1);
@@ -207,53 +297,22 @@ public class MyPanel extends JPanel {
 						;
 
 						break;
-					case "706": // 다른 플레잉어의 공격신호
-                        System.out.println("706 is skill attack = " + cm.getData());
-                        bullet.setPower(cm.getPower());
-                        bullet.setVeloY(cm.getVeloY());
-                        Thread skill_shooting = new Thread(new Runnable() {
-                            @Override
-                            public void run() {
-                                synchronized (this) {
-                                    shot = true;
-                                    checkHit();
-                                    player_attack();// 공격신호를 알리자
-                                    bullet.setPower(cm.getPower());
-                                    bullet.setVeloY(cm.getVeloY());
-                                    player_attack();
-                                    shot = false;
-                                    System.out.println("내려옴");
-                                    notify();// notify 즉 접근 가능 신호 보냄
-
-                                }
-                            }
-
-                        });
-                        skill_shooting.setDaemon(true);
-                        skill_shooting.start();
-                      
-                        new Thread(new Runnable() {
-                            @Override
-                            public void run() {
-                                synchronized (skill_shooting) {
-                                    try {
-                                        skill_shooting.wait();
-                                    } catch (InterruptedException e) {
-                                        // TODO Auto-generated catch block
-                                        e.printStackTrace();
-                                    }
-
-                                    ChatMsg obcm1 = new ChatMsg(now_player.getUser_name(), "710", "attack complete",
-                                            -10, -10);
-                                    SendObject(obcm1);
-                                    bullet.setVeloY(1.0);
-                                }
-                            }
-
-                        }).start();
-                        ;
-
-                        break;
+					case "750":
+						if(cm.getData().equals("double"))
+							System.out.println("double attack!");
+						else if(cm.getData().equals("strong"))
+							System.out.println("strong attack!");
+						else if(cm.getData().equals("shield"))
+							System.out.println("shield!");
+						break;
+					case "760":
+						if(cm.getData().equals("rightWind"))
+							System.out.println("right Wind");
+						else if(cm.getData().equals("leftWind"))
+							System.out.println("left Wind");
+						else if(cm.getData().equals("noWind"))
+							System.out.println("no Wind");
+						break;
 					case "901":
 						for (Player player : playerList) {
 							if (player.getPlayer_num() == cm.getPlayer_num())
@@ -271,44 +330,22 @@ public class MyPanel extends JPanel {
 						}
 						break;
 					case "1000":
-						game_over=true;
-						System.out.println("왔어왔어 내가왔어");
+						game_over = true;
 						result = cm.getData();
-						exit=new JButton("게임 종료");
-		                exit.addActionListener(new ActionListener() {
+						exit = new JButton("게임 종료");
+						exit.addActionListener(new ActionListener() {
 
 							@Override
 							public void actionPerformed(ActionEvent e) {
 								ChatMsg msg = new ChatMsg(null, "201", "Bye", -10, -10);
-		                        SendObject(msg);
-		                        System.exit(0);
-								
-							}
-		                    
-		                });
-		                exit.setBounds(700,460,200,60);
-		                add(exit);
-						break;
-					case "1001":
-						game_over=true;
-						result = cm.getData();
-						System.out.println("왔어왔어 내가왔어");
-						exit=new JButton("게임 종료");
-		                exit.addActionListener(new ActionListener() {
+								SendObject(msg);
+								System.exit(0);
 
-							@Override
-							public void actionPerformed(ActionEvent e) {
-								ChatMsg msg = new ChatMsg(null, "201", "Bye", -10, -10);
-		                        SendObject(msg);
-		                        System.exit(0);
-								
 							}
-		                    
-		                });
-		                exit.setBounds(700,460,200,60);
-		                add(exit);
 
-		            
+						});
+						exit.setBounds(700, 460, 200, 60);
+						add(exit);
 						break;
 
 					}
@@ -341,12 +378,11 @@ public class MyPanel extends JPanel {
 		net.start();
 
 		playSound("src/music/music.wav", true);
-		
 
 		addKeyListener(new KeyAdapter() {
 			@Override
 			public void keyPressed(KeyEvent e) {
-				if (moving && start &&!game_over) {
+				if (moving && start && !game_over) {
 
 					System.out.println(e.getKeyCode());
 					if (e.getKeyCode() == 37) {
@@ -361,6 +397,8 @@ public class MyPanel extends JPanel {
 								now_player.getPlayer_x(), now_player.getPlayer_y());
 						SendObject(obcm);
 					}
+				}
+				if (attack && start && !game_over) {
 					if (e.getKeyCode() == 38) {// 포 각도 조절 위로 조절
 
 						bullet.setVeloY(bullet.getVeloY() + 1.0);
@@ -374,39 +412,38 @@ public class MyPanel extends JPanel {
 							bullet.setPower(bullet.getPower() + 1.0);
 
 					}
-					if(e.getKeyCode() == KeyEvent.VK_K) {
-                        if (bullet.getPower() < 30.0)
-                            bullet.setPower(bullet.getPower() + 1.0);
+					if (e.getKeyCode() == KeyEvent.VK_K) {
+						if (bullet.getPower() < 30.0)
+							bullet.setPower(bullet.getPower() + 1.0);
 
-                    }
+					}
+
 				}
-
 			}
 
 			@Override
 			public void keyReleased(KeyEvent e) {
 
 				if (e.getKeyCode() == 32) {
-					if (attack == true && start &&!game_over) {
+					if (attack && start && !game_over) {
 
-						ChatMsg obcm = new ChatMsg(now_player.getUser_name(), "705", "attck!!",
-								now_player.getPlayer_x(), now_player.getPlayer_y());
+						AttackObject obcm = new AttackObject("705", bullet.getVeloY(), bullet.getPower());
 						obcm.setPower(bullet.getPower());
 						obcm.setVeloY(bullet.getVeloY());
 						SendObject(obcm);
 
 					}
-				} if (e.getKeyCode() == KeyEvent.VK_K) {
-                    if (attack == true) {
+				}
+				if (e.getKeyCode() == KeyEvent.VK_K) {
+					if (attack == true) {
 
-                        ChatMsg obcm = new ChatMsg(now_player.getUser_name(), "706", "skill attck!!",
-                                now_player.getPlayer_x(), now_player.getPlayer_y());
-                        obcm.setPower(bullet.getPower());
-                        obcm.setVeloY(bullet.getVeloY());
-                        SendObject(obcm);
+						AttackObject obcm = new AttackObject("706", bullet.getVeloY(), bullet.getPower());
+						obcm.setPower(bullet.getPower());
+						obcm.setVeloY(bullet.getVeloY());
+						SendObject(obcm);
 
-                    }
-                }
+					}
+				}
 			}
 		});
 		Thread nt = new Thread(new Runnable() {
@@ -414,8 +451,8 @@ public class MyPanel extends JPanel {
 			@Override
 			public void run() {
 				while (true) {
-					if(start)
-					repaint();
+					if (start)
+						repaint();
 					try {
 						Thread.sleep(10);
 					} catch (InterruptedException e) {
@@ -451,7 +488,7 @@ public class MyPanel extends JPanel {
 	}
 
 	public void move_right() {// 오른쪽으로 움직임
-		if (FortressUI.SCREEN_WIDTH - image_t.getWidth(null) < background_x) {// 백그라운드 이미지 크기만큼 이동이 가능하다
+		if (SCREEN_EDGE < background_x) {// 백그라운드 이미지 크기만큼 이동이 가능하다
 			// 만약에 백글아운드를 초과하면 else
 			// if로 넘어가 중앙에서 끝까지 이동함
 			now_player.movePlayer_right(camera_x, false);// 플레이어의 카메라영역을 끝으로 지정하고 이동
@@ -464,7 +501,7 @@ public class MyPanel extends JPanel {
 						player.movePlayer_left();
 				}
 			}
-		} else if (FortressUI.SCREEN_WIDTH - image_t.getWidth(null) >= background_x) {// 백그라운드 이미지가 더이상
+		} else if (SCREEN_EDGE >= background_x) {// 백그라운드 이미지가 더이상
 			// 오른쪽으로 흐를 크기가
 			// 없을때
 			now_player.movePlayer_right(camera_x, true);// player가 화면끝까지 이동할수있도록이동
@@ -481,7 +518,8 @@ public class MyPanel extends JPanel {
 	}
 
 	public void next_turn(Player next_player) {// 포탄쏘기
-		now_player.setPlayer_preX(now_player.getPlayer_x());
+		if (turn != 0)
+			now_player.setPlayer_preX(now_player.getPlayer_x());
 
 		now_player = next_player;
 		int result;
@@ -490,13 +528,16 @@ public class MyPanel extends JPanel {
 			if (result == 0)
 				break;
 			else if (result == -2) {// 이전 플레이어 위치가 더높을때 즉 배경이 왼쪽으로 흘렀으므로 오른쪽으로 이동시키고 상대플레이어도
-									// 오른쪽으로 이동시켜야됨
-				background_x += result;
-				field_x += result;
-				for (Player player : playerList) {
-					if (player != now_player)
-						player.movePlayer_left();
-				}
+				// 오른쪽으로 이동시켜야됨
+				if (SCREEN_EDGE < background_x) {
+					background_x += result;
+					field_x += result;
+					for (Player player : playerList) {
+						if (player != now_player)
+							player.movePlayer_left();
+					}
+				} else
+					break;
 			} else if (result == 2) {
 				background_x += result;
 				field_x += result;
@@ -504,7 +545,8 @@ public class MyPanel extends JPanel {
 					if (player != now_player)
 						player.movePlayer_right();
 				}
-			}
+			} else
+				break;
 			try {
 				Thread.sleep(10);
 			} catch (InterruptedException e) {
@@ -512,10 +554,12 @@ public class MyPanel extends JPanel {
 			}
 
 		}
+		now_player.setMoveGauge(130);// 이동 게이지 조정
 		if (now_player == my_player) {
 			moving = true;// 이동가능
 			attack = true;// 공격가능
 		}
+		turn++;
 	}
 
 	void checkHit() {// bullet에 맞는지 확인
@@ -560,50 +604,55 @@ public class MyPanel extends JPanel {
 
 	@Override
 	public void paintComponent(Graphics g) {
-		
 
 		g.drawImage(image, background_x, 0, image.getWidth(null), image.getHeight(null), null);
-		g.drawImage(image_t, field_x, field, null);
-		if(start) {
-			
-		for (Player player : playerList) {
-			if(player.getUserStatus().equals("O")) {
+		g.drawImage(image_tree, field_x, field, null);
+		if (start && !game_over) {
 
-				if (player.isDirection())
-					g.drawImage(player.getImage_r(), player.getPlayer_x(), player.getPlayer_y(), null);
-				else {
-					g.drawImage(player.getImage_l(), player.getPlayer_x(), player.getPlayer_y(), null);
+			for (Player player : playerList) {
+				if (player.getUserStatus().equals("O")) {
+
+					if (player.isDirection())
+						g.drawImage(player.getImage_r(), player.getPlayer_x(), player.getPlayer_y(), null);
+					else {
+						g.drawImage(player.getImage_l(), player.getPlayer_x(), player.getPlayer_y(), null);
+					}
+					g.setColor(Color.GREEN);
+					g.fillRect(player.getPlayer_x(), player.getPlayer_y() - 20, (int) (player.getPlayer_hp() / 2), 10);
+					g.setColor(Color.BLUE);
+					g.fillRect(player.getPlayer_x(), player.getPlayer_y() - 40, (int) (player.getMoveGauge() / 3), 10);
+					g.setColor(Color.RED);
+					g.setFont(hp);
+					g.drawString("HP", player.getPlayer_x() - 15, player.getPlayer_y() - 10);
+					g.drawString("Move", player.getPlayer_x() - 25, player.getPlayer_y() - 20);
+					{
+						if (player.getTeamStatus().equals("team1"))
+							g.setColor(Color.BLUE);
+						else if (player.getTeamStatus().equals("team2"))
+							g.setColor(Color.PINK);
+						g.setFont(f);
+						g.drawString(player.getUser_name(), player.getPlayer_x() + 5, player.getPlayer_y() + 80);
+					}
+
 				}
-				g.setColor(Color.GREEN);
-                g.fillRect(player.getPlayer_x(), player.getPlayer_y() - 20, (int) (player.getPlayer_hp() / 2), 10);
-                g.fillRect(now_player.getPlayer_x(), now_player.getPlayer_y() - 40, (int) (bullet.getPower()), 10);
-                g.setColor(Color.RED);
-                g.setFont(hp);
-                g.drawString("HP", player.getPlayer_x() -15 , player.getPlayer_y() - 10);
-				{
-					if(player.getTeamStatus().equals("team1"))
-						g.setColor(Color.BLUE);
-					else if(player.getTeamStatus().equals("team2"))
-						g.setColor(Color.PINK);
-					g.setFont(f);
-					g.drawString(player.getUser_name(), player.getPlayer_x() + 5, player.getPlayer_y() + 80);
-				}
-			
+			}
+			g.drawImage(image_turn, now_player.getPlayer_x() + 12, now_player.getPlayer_y() - 100, 30, 30, null);
+			g.setColor(Color.YELLOW);
+			g.fillRect(now_player.getPlayer_x(), now_player.getPlayer_y() - 60, (int) (bullet.getPower()), 10);// 플레이어
+																												// 가르키는
+																												// 화살표
 		}
-		}
-		}
-		
+
 		if (result != null) {
 			g.setColor(Color.RED);
 			g.setFont(new Font("궁서", Font.BOLD, 100));
 			g.drawString("GAME OVER", 180, 100);
 			g.setFont(new Font("궁서", Font.BOLD, 60));
-			g.drawString(my_player.getTeamStatus() + " "+my_player.getUser_name() +" " +result, 320, 180);
+			g.drawString(my_player.getTeamStatus() + " " + my_player.getUser_name() + " " + result, 240, 180);
 		}
 
 		if (bullet.isShot())
 			g.drawImage(bullet.getImage_bullet(), bullet.getBullet_x(), bullet.getBullet_y(), null);
-		
 
 	}
 
