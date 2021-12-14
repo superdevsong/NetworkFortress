@@ -97,15 +97,16 @@ public class Player {
 	}
 	public void moveNowPlayer_left(boolean edge) {
 		if(moveGauge>0) {
+			System.out.println("왼쪽 게이지 "+moveGauge);
 			moveGauge -=1;
 		direction=false;
 		if(player_x>=500)
 		player_x-=2;
 		if(edge && player_x>=0)
 			player_x-=2;
+		System.out.println("?????");
 		}
-		else
-			myPanel.setMoving(false);//무빙금지
+		//무빙금지
 	}
 	public void init(int field, int x,int hp) {
 		player_y=field-image_r.getHeight(null);;
@@ -127,14 +128,15 @@ public class Player {
 	}
 	public void movePlayer_right(int camera_x,boolean edge) {
 		if(moveGauge>0) {
+			System.out.println("오른쪽 게이지 "+moveGauge);
 			moveGauge -=1;
 		direction=true;
 		if(player_x< camera_x-image_r.getWidth(null))
 		player_x+=2;
 		if(edge&&player_x< FortressUI.SCREEN_WIDTH-image_r.getWidth(null))//오른쪽으로 어느정도 왔을때 끝까지 이동할수있게 설정
 			player_x+=2;
-		}else
-			myPanel.setMoving(false);//무빙금지
+		}
+		//무빙금지
 	}
 	public int getMoveGauge() {
 		return moveGauge;

@@ -36,8 +36,30 @@ import javax.swing.JPanel;
  * 이중 버퍼링이라던가 변수 하나로 선언해서 묶는다던가
  * */
 public class MyPanel extends JPanel {
+	// 프로토콜 정리
 	public static final int SCREEN_WIDTH = 960;
 	public static final int SCREEN_HEIGHT = 640;
+	public static final String CHATTING_PROTOCOL = "200";// 채팅
+	public static final String EXIT_PROTOCOL = "201";// 게임을 나감
+	public static final String MYPLAYERINIT_PROTOCOL = "500";// 내 플레이어 초기화
+	public static final String OTHERPLAYERINIT_PROTOCOL = "501";// 상대 플레이어 초기화
+	public static final String GAMESTART_PROTOCOL = "502";// 게임시작 알림
+	public static final String YOURTURN_PROTOCOL = "600";// 나의 턴을 알림
+	public static final String OTHERTURN_PROTOCOL = "601";// 상대 턴을 알림
+	public static final String PLAYERMOVERIGHT_PROTOCOL = "700";// 오른쪽으로 이동을 알림
+	public static final String PLAYERMOVELEFT_PROTOCOL = "701";// 왼쪽으로 이동을 알림
+	public static final String PLAYERATTACK_PROTOCOL = "705";// 플레이어가 공격을함
+	public static final String DOUBLEATTACK_PROTOCOL = "706";// 플레이어가 두번공격 스킬로 공격을함
+	public static final String POWERATTACK_PROTOCOL = "707";// 플레이어가 강한 공격 스킬로 공격을함
+	public static final String HEALING_PROTOCOL = "708";// 체력회복 스킬 사용
+	public static final String ATTACK_COMPLETE = "710";//// 공격이 성공함
+	public static final String CREATESKILL_PROTOCOL = "750";// 스킬생성
+	public static final String HIT_PROTOCOL = "900";// 플레이어 맞춤
+	public static final String POWERHIT_PROTOCOL = "907";// 플레이어를 POWERATTACK스킬로 맞춤
+	public static final String HPMINUS_PROTOCOL = "901";// 플레이어 HP가 감소됨
+	public static final String DEAD_PROTOCOL = "902";// 플레이어가 죽음
+	public static final String GAMEOVER_PROTOCOL = "1000";// 게임이 끝남
+
 	Image image = new ImageIcon("src/fortress/ui/forest.jpg").getImage();// 배경
 	Image image_tree = new ImageIcon("src/fortress/ui/tree_1.jpg").getImage();// 맵의 다리
 	Image image_turn = new ImageIcon("src/fortress/ui/triangle.png").getImage();// nowplayer 화살표
@@ -45,13 +67,13 @@ public class MyPanel extends JPanel {
 	Image power_shot = new ImageIcon("src/fortress/ui/powershoot.png").getImage();// 아이템 추가
 	Image heal = new ImageIcon("src/fortress/ui/heal.png").getImage();// 아이템 추가
 	Image team1l = new ImageIcon("src/image/player/player1_attack.gif").getImage();
-    Image team1r = new ImageIcon("src/image/player/player1r_attack.gif").getImage();
-    Image team2l = new ImageIcon("src/image/player/player2_attack.gif").getImage();
-    Image team2r = new ImageIcon("src/image/player/player2r_attack.gif").getImage();
-    
-    private Image img;
-    private Graphics img_g;//더블버퍼링 변수
-    
+	Image team1r = new ImageIcon("src/image/player/player1r_attack.gif").getImage();
+	Image team2l = new ImageIcon("src/image/player/player2_attack.gif").getImage();
+	Image team2r = new ImageIcon("src/image/player/player2r_attack.gif").getImage();
+
+	private Image img;
+	private Graphics img_g;// 더블버퍼링 변수
+
 	public final int SCREEN_EDGE = FortressUI.SCREEN_WIDTH - image_tree.getWidth(null);
 	private Font f = new Font("Arial", Font.BOLD, 30);
 	private Font hp = new Font("Arial", Font.BOLD, 12);
@@ -211,12 +233,12 @@ public class MyPanel extends JPanel {
 					} else
 						continue;
 					switch (code) {
-					case "200": // chat message
+					case CHATTING_PROTOCOL: // 채팅
 
 						System.out.println("200" + cm.getData());
 
 						break;
-					case "500": // chat message
+					case MYPLAYERINIT_PROTOCOL: // 내 자신 초기화
 						System.out.println("500" + cm.getData() + " player_num:" + cm.getPlayer_num());
 						new_player = new Player(cm.getPlayer_num(), cm.getTeamStatus(), cm.getUserStatus(),
 								cm.getData());
@@ -229,7 +251,7 @@ public class MyPanel extends JPanel {
 							new_player.setPlayer_preX(500);
 						System.out.println("요로로로로!!!!" + cm.getPlayer_x());
 						break;
-					case "501": // chat message
+					case OTHERPLAYERINIT_PROTOCOL: // 상대 초기화
 						System.out.println("501 myplayer" + cm.getData() + " player_num:" + cm.getPlayer_num());
 						my_player = new Player(cm.getPlayer_num(), cm.getTeamStatus(), cm.getUserStatus(),
 								cm.getData());
@@ -242,36 +264,36 @@ public class MyPanel extends JPanel {
 							my_player.setPlayer_preX(500);
 						System.out.println("요로로로로!!!!" + cm.getPlayer_x());
 						break;
-					case "502": // chat message
+					case GAMESTART_PROTOCOL: // 게임 시작
 						System.out.println("게임시작했어!!!!");
 						start = true;
 						break;
-					case "600": // chat message
+					case YOURTURN_PROTOCOL: // 내 턴
 						System.out.println("600 is your turn");
 						next_turn(my_player);
 						mySkill();
 
 						break;
-					case "601": // 다음턴
+					case OTHERTURN_PROTOCOL: // 다음턴
 						System.out.println("601 is other  turn");
 						for (Player player : playerList) {
 							if (player.getPlayer_num() == cm.getPlayer_num())
 								next_turn(player);
 						}
 						break;
-					case "700": // 다른 플레잉어의 이동신호 오른쪽
+					case PLAYERMOVERIGHT_PROTOCOL: // 다른 플레잉어의 이동신호 오른쪽
 						System.out.println("700 is going = " + cm.getData());
 						move_right();
 						if (now_player.getPlayer_x() != cm.getPlayer_x())
 							now_player.setPlayer_x(cm.getPlayer_x());// 만약 자신의 x와 다르면 두개를 맞춤
 						break;
-					case "701": // 다른 플레잉어의 이동신호 왼쪽
+					case PLAYERMOVELEFT_PROTOCOL: // 다른 플레잉어의 이동신호 왼쪽
 						System.out.println("701 is going = " + cm.getData());
 						move_left();
 						if (now_player.getPlayer_x() != cm.getPlayer_x())// 만약자신의 x와 다르면 두개를 맞춤
 							now_player.setPlayer_x(cm.getPlayer_x());
 						break;
-					case "705": // 다른 플레잉어의 공격신호
+					case PLAYERATTACK_PROTOCOL:// 다른 플레잉어의 공격신호 AttackObject를 사용한다.
 						System.out.println("705 is attack = " + cm.getData());
 						bullet.setPower(ao.getPower());
 						bullet.setVeloY(ao.getVeloY());
@@ -303,7 +325,7 @@ public class MyPanel extends JPanel {
 										e.printStackTrace();
 									}
 
-									AttackObject obcm1 = new AttackObject("710", 0, 0);
+									AttackObject obcm1 = new AttackObject(ATTACK_COMPLETE, 0, 0);
 									SendObject(obcm1);
 									bullet.setVeloY(1.0);
 								}
@@ -313,41 +335,45 @@ public class MyPanel extends JPanel {
 						;
 
 						break;
-					case "706": // 다른 플레잉어의 공격신호 AttackObject를 사용한다.
+					case DOUBLEATTACK_PROTOCOL: // 다른 플레잉어의 스킬 공격신호 AttackObject를 사용한다.
 						System.out.println("706 is skill attack = " + cm.getData());
 						bullet.setPower(ao.getPower());
 						bullet.setVeloY(ao.getVeloY());
-						int itemNumber = -1;
+						int index = 0;
 						Vector<Item> myItemVc = now_player.getItems();
 						for (Item item : myItemVc) {
 							if (item.getItemNumber() == 0) {
 								item.perform(myPanel);
-								itemNumber = myItemVc.indexOf(item);
 								break;
 							}
+							index++;
 						}
-						myItemVc.remove(itemNumber);
+						if (index <= myItemVc.size())
+							myItemVc.remove(index);
 						// item쓰고 item 삭제
 
 						break;
-					case "707": // 다른 플레잉어의 공격신호 AttackObject를 사용한다.
+					case POWERATTACK_PROTOCOL: // 다른 플레잉어의 스킬 공격신호 AttackObject를 사용한다.
 						System.out.println("707 is skill attack = " + cm.getData());
 						bullet.setPower(ao.getPower());
 						bullet.setVeloY(ao.getVeloY());
-						int itemNumber1 = -1;
+
+						int index1 = 0;
 						Vector<Item> myItemVc1 = now_player.getItems();
 						for (Item item : myItemVc1) {
 							if (item.getItemNumber() == 1) {
 								item.perform(myPanel);
-								itemNumber1 = myItemVc1.indexOf(item);
 								break;
 							}
+							index1++;
 						}
-						myItemVc1.remove(itemNumber1);
+						if (index1 <= myItemVc1.size())
+							myItemVc1.remove(index1);
+						// item쓰고 item 삭
 						// item쓰고 item 삭제
 
 						break;
-					case "750":
+					case CREATESKILL_PROTOCOL:// 스킬생성
 						if (cm.getData().equals("double")) {
 							System.out.println("double attack!");
 							item_vc.add(new DoubleAttack(cm.getPlayer_x()));// 게임 아이템 배치에 추가
@@ -360,21 +386,14 @@ public class MyPanel extends JPanel {
 						}
 
 						break;
-					case "760":
-						if (cm.getData().equals("rightWind"))
-							System.out.println("right Wind");
-						else if (cm.getData().equals("leftWind"))
-							System.out.println("left Wind");
-						else if (cm.getData().equals("noWind"))
-							System.out.println("no Wind");
-						break;
-					case "901":
+
+					case HPMINUS_PROTOCOL:
 						for (Player player : playerList) {
 							if (player.getPlayer_num() == cm.getPlayer_num())
 								player.setPlayer_hp(cm.getHp());
 						}
 						break;
-					case "902":
+					case DEAD_PROTOCOL:
 						for (Player player : playerList) {
 							if (player.getPlayer_num() == cm.getPlayer_num()) {
 								playerList.remove(player);
@@ -384,24 +403,25 @@ public class MyPanel extends JPanel {
 
 						}
 						break;
-					case "908":
-						bullet.setPower(ao.getPower());
-						bullet.setVeloY(ao.getVeloY());
-						int itemNumber2 = -1;
+					case HEALING_PROTOCOL:
+						 int index2 = 0;
 						Vector<Item> myItemVc2 = now_player.getItems();
 						for (Item item : myItemVc2) {
 							if (item.getItemNumber() == 2) {
-								for (Player player : playerList) {//item perform
+								for (Player player : playerList) {// item perform
 									if (player.getPlayer_num() == cm.getPlayer_num())
 										player.setPlayer_hp(cm.getHp());
 								}
-								itemNumber2 = myItemVc2.indexOf(item);
 								break;
 							}
+							index2++;
 						}
-						myItemVc2.remove(itemNumber2);
+						if (index2 <= myItemVc2.size())
+							myItemVc2.remove(index2);
+						// item쓰고 item 삭
+						// item쓰고 item 삭제
 						break;
-					case "1000":
+					case GAMEOVER_PROTOCOL:
 						game_over = true;
 						result = cm.getData();
 						exit = new JButton("게임 종료");
@@ -409,7 +429,7 @@ public class MyPanel extends JPanel {
 
 							@Override
 							public void actionPerformed(ActionEvent e) {
-								ChatMsg msg = new ChatMsg(null, "201", "Bye", -10, -10);
+								ChatMsg msg = new ChatMsg(null, EXIT_PROTOCOL, "Bye", -10, -10);
 								SendObject(msg);
 								System.exit(0);
 
@@ -464,7 +484,7 @@ public class MyPanel extends JPanel {
 		System.out.println(oos + "존재");
 
 		// SendMessage("/login " + UserName);
-		ChatMsg obcm = new ChatMsg(null, "500", "gamejoin", -10, -10);
+		ChatMsg obcm = new ChatMsg(null, MYPLAYERINIT_PROTOCOL, "gamejoin", -10, -10);// 플레이어가 참여했다고 INIT요청을함
 		// 로그인 사실을 알림와 동시에 초기 위치 알림
 		SendObject(obcm);
 		ListenNetwork net = new ListenNetwork();
@@ -481,13 +501,13 @@ public class MyPanel extends JPanel {
 					System.out.println(e.getKeyCode());
 					if (e.getKeyCode() == 37) {
 						move_left();
-						ChatMsg obcm = new ChatMsg(now_player.getUser_name(), "701", "move left",
+						ChatMsg obcm = new ChatMsg(now_player.getUser_name(), PLAYERMOVELEFT_PROTOCOL, "move left",
 								now_player.getPlayer_x(), now_player.getPlayer_y());
 						SendObject(obcm);// 이동 내용을 보냄
 					}
 					if (e.getKeyCode() == 39) {
 						move_right();
-						ChatMsg obcm = new ChatMsg(now_player.getUser_name(), "700", "move right",
+						ChatMsg obcm = new ChatMsg(now_player.getUser_name(), PLAYERMOVERIGHT_PROTOCOL, "move right",
 								now_player.getPlayer_x(), now_player.getPlayer_y());
 						SendObject(obcm);
 					}
@@ -518,8 +538,8 @@ public class MyPanel extends JPanel {
 					}
 					if (e.getKeyCode() == KeyEvent.VK_E) {
 						if (skillHeal > 0) {
-							skillHeal-=1;
-							AttackObject obcm = new AttackObject("708", -10, -10);
+							skillHeal -= 1;
+							AttackObject obcm = new AttackObject(HEALING_PROTOCOL, -10, -10);
 							SendObject(obcm);
 						}
 
@@ -534,7 +554,8 @@ public class MyPanel extends JPanel {
 				if (e.getKeyCode() == 32) {
 					if (attack && start && !game_over) {
 
-						AttackObject obcm = new AttackObject("705", bullet.getVeloY(), bullet.getPower());
+						AttackObject obcm = new AttackObject(PLAYERATTACK_PROTOCOL, bullet.getVeloY(),
+								bullet.getPower());
 						SendObject(obcm);
 
 					}
@@ -542,8 +563,9 @@ public class MyPanel extends JPanel {
 				if (e.getKeyCode() == KeyEvent.VK_Q) {
 
 					if (attack == true && skillDouble > 0) {
-						skillDouble-=1;
-						AttackObject obcm = new AttackObject("706", bullet.getVeloY(), bullet.getPower());
+						skillDouble -= 1;
+						AttackObject obcm = new AttackObject(DOUBLEATTACK_PROTOCOL, bullet.getVeloY(),
+								bullet.getPower());
 						SendObject(obcm);
 
 					}
@@ -551,8 +573,9 @@ public class MyPanel extends JPanel {
 				if (e.getKeyCode() == KeyEvent.VK_W) {
 
 					if (attack == true && skillPower > 0) {
-						skillPower-=1;
-						AttackObject obcm = new AttackObject("707", bullet.getVeloY(), bullet.getPower());
+						skillPower -= 1;
+						AttackObject obcm = new AttackObject(POWERATTACK_PROTOCOL, bullet.getVeloY(),
+								bullet.getPower());
 						SendObject(obcm);
 
 					}
@@ -584,7 +607,7 @@ public class MyPanel extends JPanel {
 			@Override
 			public void run() {
 				boolean get = false;
-				int index = -1;
+				int index = 0;
 				while (true) {
 					if (start) {
 						for (Item item : item_vc) {// 아이템추가
@@ -600,19 +623,19 @@ public class MyPanel extends JPanel {
 								}
 
 							}
+							
 							if (get) {
 								index = item_vc.indexOf(item);
 								break;
 							}
+							index++;
 						}
 						if (get) {
 
 							get = false;
 							item_vc.remove(index);
-
-							index = -1;
 						}
-
+						index = 0;
 					}
 					try {
 						Thread.sleep(50);
@@ -631,46 +654,51 @@ public class MyPanel extends JPanel {
 	public void move_left() {// 왼쪽으로 움직임
 		// background가 이미지크기에 도달할때까지 옆으로 화면이 흐름
 		// player_x -= 2;
+		if (now_player.getMoveGauge() > 0) {
+			if (background_x != 0) {// 맵의 중앙에서 배경이 흐를수 있을때
+				now_player.moveNowPlayer_left(false);// 왼쪽으로 이동
 
-		if (background_x != 0) {// 맵의 중앙에서 배경이 흐를수 있을때
-			now_player.moveNowPlayer_left(false);// 왼쪽으로 이동
-
-			if (now_player.getPlayer_x() <= camera_x) {// 맵에 오른쪽에 있을수 있으므로 그럴때는 이렇게 camera의 위치를 고려하여 이동
-				background_x += 2;
-				field_x += 2;
-				for (Player player : playerList) {
-					if (player != now_player)
-						player.movePlayer_right();
+				if (now_player.getPlayer_x() <= camera_x) {// 맵에 오른쪽에 있을수 있으므로 그럴때는 이렇게 camera의 위치를 고려하여 이동
+					background_x += 2;
+					field_x += 2;
+					for (Player player : playerList) {
+						if (player != now_player)
+							player.movePlayer_right();
+					}
+					for (Item item : item_vc)
+						item.setItemX(item.getItemX() + 2);
 				}
-				for (Item item : item_vc)
-					item.setItemX(item.getItemX() + 2);
-			}
-		} else if (background_x == 0)// 맵의 중앙에서 배경이 끝에 도달해 더이상 흐르지 못할때
-			now_player.moveNowPlayer_left(true);// 왼쪽으로 이동
+			} else if (background_x == 0)// 맵의 중앙에서 배경이 끝에 도달해 더이상 흐르지 못할때
+				now_player.moveNowPlayer_left(true);// 왼쪽으로 이동
+		} else
+			now_player.setDirection(false);
 
 	}
 
 	public void move_right() {// 오른쪽으로 움직임
-		if (SCREEN_EDGE < background_x) {// 백그라운드 이미지 크기만큼 이동이 가능하다
-			// 만약에 백글아운드를 초과하면 else
-			// if로 넘어가 중앙에서 끝까지 이동함
-			now_player.movePlayer_right(camera_x, false);// 플레이어의 카메라영역을 끝으로 지정하고 이동
-			if (now_player.getPlayer_x() >= camera_x - now_player.getImage_r().getWidth(null)) {// 맵의끝에
-				// 갔을때
-				background_x -= 2;
-				field_x -= 2;
-				for (Player player : playerList) {
-					if (player != now_player)
-						player.movePlayer_left();
+		if (now_player.getMoveGauge() > 0) {
+			if (SCREEN_EDGE < background_x) {// 백그라운드 이미지 크기만큼 이동이 가능하다
+				// 만약에 백글아운드를 초과하면 else
+				// if로 넘어가 중앙에서 끝까지 이동함
+				now_player.movePlayer_right(camera_x, false);// 플레이어의 카메라영역을 끝으로 지정하고 이동
+				if (now_player.getPlayer_x() >= camera_x - now_player.getImage_r().getWidth(null)) {// 맵의끝에
+					// 갔을때
+					background_x -= 2;
+					field_x -= 2;
+					for (Player player : playerList) {
+						if (player != now_player)
+							player.movePlayer_left();
+					}
+					for (Item item : item_vc)
+						item.setItemX(item.getItemX() - 2);
 				}
-				for (Item item : item_vc)
-					item.setItemX(item.getItemX() - 2);
+			} else if (SCREEN_EDGE >= background_x) {// 백그라운드 이미지가 더이상
+				// 오른쪽으로 흐를 크기가
+				// 없을때
+				now_player.movePlayer_right(camera_x, true);// player가 화면끝까지 이동할수있도록이동
 			}
-		} else if (SCREEN_EDGE >= background_x) {// 백그라운드 이미지가 더이상
-			// 오른쪽으로 흐를 크기가
-			// 없을때
-			now_player.movePlayer_right(camera_x, true);// player가 화면끝까지 이동할수있도록이동
-		}
+		} else
+			now_player.setDirection(true);
 
 	}
 
@@ -761,9 +789,9 @@ public class MyPanel extends JPanel {
 								continue;
 							if (player == my_player) {// 모두가 보내면 요청이겹치므로
 								if (powerOn)
-									obcm = new ChatMsg(player.getUser_name(), "907", "power hit", -10, -10);
+									obcm = new ChatMsg(player.getUser_name(), POWERHIT_PROTOCOL, "power hit", -10, -10);
 								else
-									obcm = new ChatMsg(player.getUser_name(), "900", "hit", -10, -10);
+									obcm = new ChatMsg(player.getUser_name(), HIT_PROTOCOL, "hit", -10, -10);
 								obcm.setPlayer_num(player.getPlayer_num());// 데미지입힘
 								obcm.setTeamStatus(now_player.getTeamStatus());// 쏘는놈 팀정보
 								SendObject(obcm);
@@ -790,88 +818,86 @@ public class MyPanel extends JPanel {
 	}
 
 	@Override
-	public void paintComponent(Graphics g) { 
+	public void paintComponent(Graphics g) {
 		img = createImage(980, 640);
-		img_g = img.getGraphics(); //Graphics
+		img_g = img.getGraphics(); // Graphics
 		paintComponents(img_g);
 
-		 img_g.drawImage(image, background_x, 0, image.getWidth(null), image.getHeight(null), null);
-	        img_g.drawImage(image_tree, field_x, field, null);
+		img_g.drawImage(image, background_x, 0, image.getWidth(null), image.getHeight(null), null);
+		img_g.drawImage(image_tree, field_x, field, null);
 		if (start) {
 
 			for (Player player : playerList) {
 				if (player.getUserStatus().equals("O")) {
 
-					if(player.getTeamStatus().equals("team2")) {
-	                    if (player.isDirection()) {
-	                        img_g.drawImage(team2r, player.getPlayer_x(), player.getPlayer_y(), null);
-	                        }
-	                    else {
-	                        img_g.drawImage(team2l, player.getPlayer_x(), player.getPlayer_y(), null);
-	                    }
-	                }
-	                else {
-	                    if (player.isDirection()) {
-	                        img_g.drawImage(team1r, player.getPlayer_x(), player.getPlayer_y(), null);
-	                        }
-	                    else {
-	                        img_g.drawImage(team1l, player.getPlayer_x(), player.getPlayer_y(), null);
-	                    }
-	                }
-				    img_g.setColor(Color.GREEN);
-                    img_g.fillRect(player.getPlayer_x(), player.getPlayer_y() - 20, (int) (player.getPlayer_hp() / 2), 10);
-                    img_g.setColor(Color.BLUE);
-                    img_g.fillRect(player.getPlayer_x(), player.getPlayer_y() - 40, (int) (player.getMoveGauge() / 3), 10);
-                    img_g.setColor(Color.RED);
-                    img_g.setFont(hp);
-                    img_g.drawString("HP", player.getPlayer_x() -15 , player.getPlayer_y() - 10);
-                    img_g.drawString("Move", player.getPlayer_x() - 30 , player.getPlayer_y() - 30);
-                    img_g.drawString("Power", player.getPlayer_x() - 35 , player.getPlayer_y() - 50);
-                    {
-                        if (player.getTeamStatus().equals("team1"))
-                            img_g.setColor(Color.BLUE);
-                        else if (player.getTeamStatus().equals("team2"))
-                            img_g.setColor(Color.PINK);
-                        img_g.setFont(f);
-                        img_g.drawString(player.getUser_name(), player.getPlayer_x() + 5, player.getPlayer_y() + 80);
-                    }
-
+					if (player.getTeamStatus().equals("team2")) {
+						if (player.isDirection()) {
+							img_g.drawImage(team2r, player.getPlayer_x(), player.getPlayer_y(), null);
+						} else {
+							img_g.drawImage(team2l, player.getPlayer_x(), player.getPlayer_y(), null);
+						}
+					} else {
+						if (player.isDirection()) {
+							img_g.drawImage(team1r, player.getPlayer_x(), player.getPlayer_y(), null);
+						} else {
+							img_g.drawImage(team1l, player.getPlayer_x(), player.getPlayer_y(), null);
+						}
+					}
+					img_g.setColor(Color.GREEN);
+					img_g.fillRect(player.getPlayer_x(), player.getPlayer_y() - 20, (int) (player.getPlayer_hp() / 2),
+							10);
+					img_g.setColor(Color.BLUE);
+					img_g.fillRect(player.getPlayer_x(), player.getPlayer_y() - 40, (int) (player.getMoveGauge() / 3),
+							10);
+					img_g.setColor(Color.RED);
+					img_g.setFont(hp);
+					img_g.drawString("HP", player.getPlayer_x() - 15, player.getPlayer_y() - 10);
+					img_g.drawString("Move", player.getPlayer_x() - 30, player.getPlayer_y() - 30);
+					img_g.drawString("Power", player.getPlayer_x() - 35, player.getPlayer_y() - 50);
+					{
+						if (player.getTeamStatus().equals("team1"))
+							img_g.setColor(Color.BLUE);
+						else if (player.getTeamStatus().equals("team2"))
+							img_g.setColor(Color.PINK);
+						img_g.setFont(f);
+						img_g.drawString(player.getUser_name(), player.getPlayer_x() + 5, player.getPlayer_y() + 80);
+					}
 
 				}
 			}
 			img_g.drawImage(image_turn, now_player.getPlayer_x() + 12, now_player.getPlayer_y() - 100, 30, 30, null);
-            img_g.setColor(Color.YELLOW);			
-            img_g.fillRect(now_player.getPlayer_x(), now_player.getPlayer_y() - 60, (int) (bullet.getPower() * 1.5), 10);// 플레이어 가르키는  화살표
-            
-            for (Item item : item_vc) {
-                img_g.drawImage(item.getImage(), item.getItemX(), field - 20, 20, 20, null);
-            }
-            if (now_player == my_player) {// item 추가
-                if (skillDouble > 0)
-                    img_g.drawImage(double_shot, 0, 500, 160, 100, null);
-                if (skillPower > 0)
-                    img_g.drawImage(power_shot, 170, 500, 160, 100, null);
-                if (skillHeal > 0)
-                    img_g.drawImage(heal, 340, 500, 160, 100, null);
-            }
-                                                                                                              
-			
+			img_g.setColor(Color.YELLOW);
+			img_g.fillRect(now_player.getPlayer_x(), now_player.getPlayer_y() - 60, (int) (bullet.getPower() * 1.5),
+					10);// 플레이어 가르키는 화살표
+
+			for (Item item : item_vc) {
+				img_g.drawImage(item.getImage(), item.getItemX(), field - 20, 20, 20, null);
+			}
+			if (now_player == my_player) {// item 추가
+				if (skillDouble > 0)
+					img_g.drawImage(double_shot, 0, 500, 160, 100, null);
+				if (skillPower > 0)
+					img_g.drawImage(power_shot, 170, 500, 160, 100, null);
+				if (skillHeal > 0)
+					img_g.drawImage(heal, 340, 500, 160, 100, null);
+			}
+
 		}
 
 		if (result != null) {
 			img_g.setColor(Color.RED);
-            img_g.setFont(new Font("궁서", Font.BOLD, 100));
-            img_g.drawString("GAME OVER", 180, 100);
-            img_g.setFont(new Font("궁서", Font.BOLD, 60));
-            img_g.drawString(my_player.getTeamStatus() + " you are " + result, 240, 180);
+			img_g.setFont(new Font("궁서", Font.BOLD, 100));
+			img_g.drawString("GAME OVER", 180, 100);
+			img_g.setFont(new Font("궁서", Font.BOLD, 60));
+			img_g.drawString(my_player.getTeamStatus() + " you are " + result, 240, 180);
 		}
 
 		if (bullet.isShot()) {
-            if (powerOn)
-                img_g.drawImage(bullet.getImage_bullet(), bullet.getBullet_x(), bullet.getBullet_y(), 40, 40, null);
-            else
-                img_g.drawImage(bullet.getImage_bullet(), bullet.getBullet_x(), bullet.getBullet_y(), null);
-        }
+			if (powerOn)
+				img_g.drawImage(bullet.getImage_bullet(), bullet.getBullet_x(), bullet.getBullet_y(), 40, 40, null);
+			else
+				img_g.drawImage(bullet.getImage_bullet(), bullet.getBullet_x(), bullet.getBullet_y(), null);
+		}
 		g.drawImage(img, 0, 0, null);
 	}
 

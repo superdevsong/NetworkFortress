@@ -40,13 +40,10 @@ public class Room extends JPanel {
 	JTable table;
 	JTextField user1, user2, user3, user4;
 	ImageIcon team1 = new ImageIcon("src/fortress/ui/team1.png");
-    ImageIcon team2 = new ImageIcon("src/fortress/ui/team2.png");
+	ImageIcon team2 = new ImageIcon("src/fortress/ui/team2.png");
 	String TeamStatus;
 
 	DefaultTableModel model;
-
-	private DataInputStream dis;
-	private DataOutputStream dos;
 
 	private ObjectInputStream ois;
 	private ObjectOutputStream oos;
@@ -63,23 +60,6 @@ public class Room extends JPanel {
 		public void run() {
 			while (!stop) {
 				try {
-					// String msg = dis.readUTF();
-//					byte[] b = new byte[BUF_LEN];
-//					int ret;
-//					ret = dis.read(b);
-//					if (ret < 0) {
-//						AppendText("dis.read() < 0 error");
-//						try {
-//							dos.close();
-//							dis.close();
-//							socket.close();
-//							break;
-//						} catch (Exception ee) {
-//							break;
-//						}// catch문 끝
-//					}
-//					String	msg = new String(b, "euc-kr");
-//					msg = msg.trim(); // 앞뒤 blank NULL, \n 모두 제거
 
 					Object obcm = null;
 					String msg = null;
@@ -128,22 +108,35 @@ public class Room extends JPanel {
 						stop = true;
 						break;
 					case "801":
-						TeamStatus="team1";
-						user1.setText(cm.getId()+"(Team1)");
-						
+						TeamStatus = "team1";
+						if (cm.getId() == null)
+							user1.setText("Team1");
+						else if (cm.getId() != null)
+							user1.setText(cm.getId() + "(Team1)");
+
 						break;
 					case "802":
-						TeamStatus="team1";
-						user2.setText(cm.getId()+"(Team1)");
-					
+						TeamStatus = "team1";
+						if (cm.getId() == null)
+							user2.setText("Team1");
+						else if (cm.getId() != null)
+							user2.setText(cm.getId() + "(Team1)");
+
 						break;
 					case "803":
-						TeamStatus="team2";
-						user3.setText(cm.getId()+"(Team2)");
+						TeamStatus = "team2";
+						if (cm.getId() == null)
+							user3.setText("Team2");
+						else if (cm.getId() != null)
+							user3.setText(cm.getId() + "(Team2)");
 						break;
 					case "804":
-						TeamStatus="team2";
-						user4.setText(cm.getId()+"(Team2)");
+						TeamStatus = "team2";
+						if (cm.getId() == null)
+							user4.setText("Team2");
+						else if (cm.getId() != null)
+							user4.setText(cm.getId() + "(Team2)");
+
 						break;
 
 					}
@@ -167,40 +160,34 @@ public class Room extends JPanel {
 		}
 	}
 
-public Room(String username, String ip_addr, String port_no,JFrame frame) {
-		
-		setLayout(null);
-		
+	public Room(String username, String ip_addr, String port_no, JFrame frame) {
 
-		
-		JPanel jp=new JPanel();
-		JPanel jp2=new JPanel();
-		JPanel jp3=new JPanel();
-		JPanel jp4=new JPanel();
+		setLayout(null);
+
+		JPanel jp = new JPanel();
+		JPanel jp2 = new JPanel();
+		JPanel jp3 = new JPanel();
+		JPanel jp4 = new JPanel();
 
 		user1 = new JTextField("Team1");
 		user2 = new JTextField("Team1");
 		user3 = new JTextField("Team2");
 		user4 = new JTextField("Team2");
-	
-		
-		
-		jp.setBounds(500,10,185,300);
-		jp2.setBounds(700,10,185,150);
-		jp3.setBounds(500,205,185,150);
-		jp4.setBounds(700,205,185,150);
-		
-		user1.setBounds(500,165,185,30);
-		user2.setBounds(700,165,185,30);
-		user3.setBounds(500,360,185,30);
-		user4.setBounds(700,360,185,30);
-		
-	
-		
+
+		jp.setBounds(500, 10, 185, 300);
+		jp2.setBounds(700, 10, 185, 150);
+		jp3.setBounds(500, 205, 185, 150);
+		jp4.setBounds(700, 205, 185, 150);
+
+		user1.setBounds(500, 165, 185, 30);
+		user2.setBounds(700, 165, 185, 30);
+		user3.setBounds(500, 360, 185, 30);
+		user4.setBounds(700, 360, 185, 30);
+
 		JPanel button = new JPanel();
-		start=new JButton("시작");
-		ready=new JButton("준비");
-		exit=new JButton("나가기");
+		start = new JButton("시작");
+		ready = new JButton("준비");
+		exit = new JButton("나가기");
 		exit.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				ChatMsg msg = new ChatMsg(UserName, "201", "Bye", -10, -10);
@@ -208,23 +195,22 @@ public Room(String username, String ip_addr, String port_no,JFrame frame) {
 				System.exit(0);
 			}
 		});
-		button.setLayout(new GridLayout(3,1));
-		button.add(start);
+		button.setLayout(new GridLayout(3, 1));
 		button.add(ready);
 		button.add(exit);
-		button.setBounds(570,400,280,140);
+		button.setBounds(570, 400, 280, 140);
 		add(jp);
 		add(jp2);
 		add(jp3);
 		add(jp4);
-		
+
 		add(user1);
 		add(user2);
 		add(user3);
 		add(user4);
 		add(button);
-		
-		u1 = new  JButton(team1);
+
+		u1 = new JButton(team1);
 		u1.setBorderPainted(false); // 버튼 테두리 설정해제
 		u1.setPreferredSize(new Dimension(185, 150));// 버튼 크기 지정
 		jp.add(u1); // 패널에 버튼을 붙여준다
@@ -234,9 +220,7 @@ public Room(String username, String ip_addr, String port_no,JFrame frame) {
 				SendObject(msg);
 			}
 		});
-		
-		
-		
+
 		u2 = new JButton(team1);
 		u2.setBorderPainted(false); // 버튼 테두리 설정해제
 		u2.setPreferredSize(new Dimension(185, 150)); // 버튼 크기 지정
@@ -245,10 +229,10 @@ public Room(String username, String ip_addr, String port_no,JFrame frame) {
 			public void actionPerformed(ActionEvent e) {
 				ChatMsg msg = new ChatMsg(UserName, "802", "Team1", -10, -10);
 				SendObject(msg);
-			
+
 			}
 		});
-		
+
 		u3 = new JButton(team2);
 		u3.setBorderPainted(false); // 버튼 테두리 설정해제
 		u3.setPreferredSize(new Dimension(185, 150)); // 버튼 크기 지정
@@ -257,10 +241,10 @@ public Room(String username, String ip_addr, String port_no,JFrame frame) {
 			public void actionPerformed(ActionEvent e) {
 				ChatMsg msg = new ChatMsg(UserName, "803", "Team2", -10, -10);
 				SendObject(msg);
-			
+
 			}
 		});
-		
+
 		u4 = new JButton(team2);
 		u4.setBorderPainted(false); // 버튼 테두리 설정해제
 		u4.setPreferredSize(new Dimension(185, 150)); // 버튼 크기 지정
@@ -271,15 +255,10 @@ public Room(String username, String ip_addr, String port_no,JFrame frame) {
 				SendObject(msg);
 			}
 		});
-		
-		
-		
-		
-		
-		setSize(800,600);
+
+		setSize(800, 600);
 		setVisible(true);
-		
-		
+
 		this.frame = frame;
 		setBorder(new EmptyBorder(5, 5, 5, 5));
 		setLayout(null);
@@ -312,20 +291,14 @@ public Room(String username, String ip_addr, String port_no,JFrame frame) {
 		AppendText("User " + username + " connecting " + ip_addr + " " + port_no);
 		UserName = username;
 		lblUserName.setText(username);
-	
 
 		try {
 			socket = new Socket(ip_addr, Integer.parseInt(port_no));
-//			is = socket.getInputStream();
-//			dis = new DataInputStream(is);
-//			os = socket.getOutputStream();
-//			dos = new DataOutputStream(os);
 
 			oos = new ObjectOutputStream(socket.getOutputStream());
 			oos.flush();
 			ois = new ObjectInputStream(socket.getInputStream());
 
-			// SendMessage("/login " + UserName);
 			ChatMsg obcm = new ChatMsg(UserName, "100", "Join", -10, -10);
 			SendObject(obcm);
 
@@ -368,9 +341,8 @@ public Room(String username, String ip_addr, String port_no,JFrame frame) {
 			if (e.getSource() == ready) {
 				ChatMsg obcm = new ChatMsg(UserName, "400", "ready", -10, -10);
 				SendObject(obcm);
-				//System.out.println(fd.getDirectory() + fd.getFile());
-				
-				
+				// System.out.println(fd.getDirectory() + fd.getFile());
+
 			}
 		}
 	}
@@ -405,7 +377,6 @@ public Room(String username, String ip_addr, String port_no,JFrame frame) {
 			}
 		}
 	}
-	
 
 	public void AppendText(String msg) {
 		// textArea.append(msg + "\n");
