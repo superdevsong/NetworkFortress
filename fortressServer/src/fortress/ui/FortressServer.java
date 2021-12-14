@@ -200,7 +200,7 @@ public class FortressServer extends JFrame {
 				public void run() {
 					while (true) {
 						for (UserService user : user_vc) {
-							if (user.hp == 0 && user.UserStatus == "O") {
+							if (user.hp <= 0 && user.UserStatus == "O") {
 								user.UserStatus = "D";
 								ChatMsg obcm = new ChatMsg("SERVER", "902", "player die", -10, -10);// 플레이어가 죽으면 죽은 신호를
 																									// 보냄
@@ -364,43 +364,51 @@ public class FortressServer extends JFrame {
 
 		public void itemCreation() {// item을 확률적으로 생성
 			int itemNumber = (int) (Math.random() * 100);
-			System.out.println("몇이냐"+ itemNumber) ;
+			int itemX = (int) (Math.random() * 900);
+			System.out.println("몇이냐" + itemNumber);
 			if (itemNumber >= 0 && itemNumber < 20) {
-				ChatMsg obcm = new ChatMsg("SERVER", "750", "double", -10, -10);// 더블샷
+				ChatMsg obcm = new ChatMsg("SERVER", "750", "double", itemX, -10);// 더블샷
 				for (UserService user : user_vc) {
-					user.WriteOneObject(obcm);;
-				}	
+					user.WriteOneObject(obcm);
+					;
+				}
 			} else if (itemNumber >= 20 && itemNumber < 40) {
-				ChatMsg obcm = new ChatMsg("SERVER", "750", "strong", -10, -10);// 좀강한샷
+				ChatMsg obcm = new ChatMsg("SERVER", "750", "strong", itemX, -10);// 좀강한샷
 				for (UserService user : user_vc) {
-					user.WriteOneObject(obcm);;
-				}	
+					user.WriteOneObject(obcm);
+					;
+				}
 			} else if (itemNumber >= 40 && itemNumber < 60) {
-				ChatMsg obcm = new ChatMsg("SERVER", "750", "shield", -10, -10);// 방어
+				ChatMsg obcm = new ChatMsg("SERVER", "750", "heal", itemX, -10);// 힐
 				for (UserService user : user_vc) {
-					user.WriteOneObject(obcm);;
-				}	
-			} 
+					user.WriteOneObject(obcm);
+					
+				}
+			}
 		}
+
 		public void windCreation() {// wind를 확률적으로 생성
 			int windNumber = (int) (Math.random() * 100);
-			System.out.println("몇이냐"+ windNumber) ;
+			System.out.println("몇이냐" + windNumber);
 			if (windNumber >= 0 && windNumber < 30) {
 				ChatMsg obcm = new ChatMsg("SERVER", "760", "rightWind", -10, -10);// 패배
 				for (UserService user : user_vc) {
-					user.WriteOneObject(obcm);;
-				}	
+					user.WriteOneObject(obcm);
+					;
+				}
 			} else if (windNumber >= 30 && windNumber < 60) {
 				ChatMsg obcm = new ChatMsg("SERVER", "760", "lefetWind", -10, -10);// 패배
 				for (UserService user : user_vc) {
-					user.WriteOneObject(obcm);;
-				}	
+					user.WriteOneObject(obcm);
+					;
+				}
 			} else if (windNumber >= 60 && windNumber < 100) {
 				ChatMsg obcm = new ChatMsg("SERVER", "760", "noWind", -10, -10);// 패배
 				for (UserService user : user_vc) {
-					user.WriteOneObject(obcm);;
-				}	
-			} 
+					user.WriteOneObject(obcm);
+					;
+				}
+			}
 		}
 	}
 
@@ -751,13 +759,13 @@ public class FortressServer extends JFrame {
 			WriteAllObject(obcm);
 		}
 
-		public void playerHit(int player_num, String TeamStatus) {// 플레이어가 맞으면 모두에게 이사실을 전함
+		public void playerHit(int player_num, String TeamStatus, int hp) {// 플레이어가 맞으면 모두에게 이사실을 전함
 			for (UserService user : user_vc) {
 
 				if (user.user_player_num == player_num && !user.TeamStatus.equals(TeamStatus)) {
 					System.out.println(user.TeamStatus + "fda");
 					System.out.println(TeamStatus + "vz");
-					user.hp -= 20;
+					user.hp -= hp;
 					ChatMsg obcm = new ChatMsg("SERVER", "901", "hit player_num : " + user.user_player_num, -10, -10);
 					obcm.setHp(user.hp);
 					obcm.setPlayer_num(user.user_player_num);
@@ -766,6 +774,15 @@ public class FortressServer extends JFrame {
 				}
 
 			}
+
+		}
+
+		public void playerHeal() {// 플레이어가 맞으면 모두에게 이사실을 전함\
+			hp+=20;
+			ChatMsg obcm = new ChatMsg("SERVER", "908", "hit player_num : " + user_player_num, -10, -10);
+			obcm.setHp(hp);
+			obcm.setPlayer_num(user_player_num);
+			WriteAllObject(obcm);
 
 		}
 
@@ -880,10 +897,18 @@ public class FortressServer extends JFrame {
 						AppendText(String.format("[%f] %f 입니다.", ao.getVeloY(), ao.getPower()));
 					} else if (code.matches("706")) {// attack object
 						turns++;// 공격하면 종합턴이 올라감
-						WriteAllObject(cm);
+						WriteAllObject(ao);
 						gameService.isAttack();
-						AppendText(cm.getData());
 						AppendText(String.format("[%f] %f 입니다.", ao.getVeloY(), ao.getPower()));
+					} else if (code.matches("707")) {// attack object
+						turns++;// 공격하면 종합턴이 올라감
+						WriteAllObject(ao);
+						gameService.isAttack();
+						AppendText(String.format("[%f] %f 입니다.", ao.getVeloY(), ao.getPower()));
+
+					} else if (code.matches("708")) {// attack object
+						playerHeal();
+
 					} else if (code.matches("710")) {// attack object
 						attack = true;
 						AppendText(String.format("[%f] %f 입니다.", ao.getVeloY(), ao.getPower()));
@@ -896,7 +921,9 @@ public class FortressServer extends JFrame {
 					} else if (code.matches("804")) {
 						TeamChange4();
 					} else if (code.matches("900")) {// 수정필요
-						playerHit(cm.getPlayer_num(), cm.getTeamStatus());
+						playerHit(cm.getPlayer_num(), cm.getTeamStatus(), 20);
+					} else if (code.matches("907")) {// 수정필요
+						playerHit(cm.getPlayer_num(), cm.getTeamStatus(), 30);
 					}
 				} catch (IOException e) {
 					AppendText("ois.readObject() error");

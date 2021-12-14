@@ -39,8 +39,8 @@ public class Room extends JPanel {
 	JButton u1, u2, u3, u4;
 	JTable table;
 	JTextField user1, user2, user3, user4;
-	ImageIcon team1 = new ImageIcon("src/fortress/ui/cannon.png");
-	ImageIcon team2 = new ImageIcon("src/fortress/ui/team2.png");
+	ImageIcon team1 = new ImageIcon("src/fortress/ui/team1.png");
+    ImageIcon team2 = new ImageIcon("src/fortress/ui/team2.png");
 	String TeamStatus;
 
 	DefaultTableModel model;

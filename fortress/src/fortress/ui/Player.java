@@ -12,9 +12,13 @@ public class Player {
 	
 	Image image_r = new ImageIcon("src/image/player/player2r_attack.gif").getImage();
 	Image image_l = new ImageIcon("src/image/player/player2_attack.gif").getImage();
+	Vector<Item> items = new Vector();
 	MyPanel myPanel;
 	int range_x,range_y;
 	private int player_x, player_y;
+	public Vector<Item> getItems() {
+		return items;
+	}
 	private int player_preX;
 	private int moveGauge = 0;
 	private String user_name;
@@ -27,7 +31,16 @@ public class Player {
 		this.user_name = UserName;
 	
 	}
-	
+	public void newItem(Item item) {//아이템 추가
+		this.items.add(item);
+		if(item.getItemNumber()==0) {//더블공격 스킬을 먹었을때
+			myPanel.setSkillDouble(myPanel.getSkillDouble()+1);
+		} else if(item.getItemNumber()==1) {//power스킬을 먹었을때
+			myPanel.setSkillPower(myPanel.getSkillPower()+1);
+		} else if(item.getItemNumber()==2) {//힐 스킬을 먹었을때
+			myPanel.setSkillHeal(myPanel.getSkillHeal()+1);
+		}
+	}
 	public void setMyPanel(MyPanel myPanel) {
 		this.myPanel = myPanel;
 	}
